@@ -1,0 +1,55 @@
+# Install required dependencies
+%cd /content
+
+# Clone the repository (using main branch instead of dev)
+!git clone https://github.com/wirapratamaz/TripoSR.git
+%cd /content/TripoSR
+
+# Ensure we have the latest updates from main branch
+!git checkout main
+!git pull origin main
+
+# Install basic dependencies
+!apt-get install -y libspatialindex-dev
+!pip install rtree>=1.0.0
+!pip install -q trimesh omegaconf einops rembg
+
+# Install torchmcubes with CUDA support
+!pip install -q git+https://github.com/tatsy/torchmcubes.git
+
+# Install compatible versions of required packages
+!pip install huggingface-hub==0.26.0
+!pip install transformers==4.35.0
+!pip install accelerate==0.20.3
+!pip install diffusers==0.14.0
+
+# Install additional dependencies
+!pip install -q xatlas==0.0.9
+!pip install -q imageio[ffmpeg]
+!pip install -q onnxruntime
+!pip install scipy>=1.11.0
+!pip install -q aiofiles fastapi pandas orjson typing-extensions
+
+# First uninstall any existing gradio installation to avoid conflicts
+!pip uninstall -y gradio
+
+# Install from requirements.txt
+!pip install -r requirements.txt
+
+# Set up environment variables for better GPU memory management
+import os
+os.environ['PYTORCH_CUDA_ALLOC_CONF'] = 'max_split_size_mb:128'
+
+# Verify CUDA availability
+import torch
+print(f"CUDA available: {torch.cuda.is_available()}")
+if torch.cuda.is_available():
+    print(f"CUDA device: {torch.cuda.get_device_name(0)}")
+    print(f"CUDA memory: {torch.cuda.get_device_properties(0).total_memory / 1e9:.2f} GB")
+
+# Verify repository exists
+!ls -la /content/TripoSR
+
+# Run the Gradio app
+%cd /content/TripoSR
+!python gradio_app.py --queuesize 1 --share
