@@ -1,7 +1,9 @@
 # TripoSR <a href="https://huggingface.co/stabilityai/TripoSR"><img src="https://img.shields.io/badge/%F0%9F%A4%97%20Model_Card-Huggingface-orange"></a> <a href="https://huggingface.co/spaces/stabilityai/TripoSR"><img src="https://img.shields.io/badge/%F0%9F%A4%97%20Gradio%20Demo-Huggingface-orange"></a> <a href="https://huggingface.co/papers/2403.02151"><img src="https://img.shields.io/badge/%F0%9F%A4%97%20Paper-Huggingface-orange"></a> <a href="https://arxiv.org/abs/2403.02151"><img src="https://img.shields.io/badge/Arxiv-2403.02151-B31B1B.svg"></a> <a href="https://discord.gg/mvS9mCfMnQ"><img src="https://img.shields.io/badge/Discord-%235865F2.svg?logo=discord&logoColor=white"></a>
 
 <div align="center">
-  <img src="figures/Topeng01" alt="Teaser Video">
+  <img src="figures/Topeng02" alt="Topeng02">
+  <img src="figures/Topeng01" alt="Topeng01">
+  <img src="figures/Topeng03" alt="Topeng03">
 </div>
 
 This is the official codebase for **TripoSR**, a state-of-the-art open-source model for **fast** feedforward 3D reconstruction from a single image, collaboratively developed by [Tripo AI](https://www.tripo3d.ai/) and [Stability AI](https://stability.ai/).
@@ -14,11 +16,11 @@ Leveraging the principles of the [Large Reconstruction Model (LRM)](https://yico
 </div>
 -->
 <p align="center">
-    <img width="800" src="figures/visual_comparisons.jpg"/>
+    <img width="800" src="figures/"/>
 </p>
 
 <p align="center">
-    <img width="450" src="figures/scatter-comparison.png"/>
+    <img width="450" src="figures/"/>
 </p>
 
 
