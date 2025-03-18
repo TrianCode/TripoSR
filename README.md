@@ -16,13 +16,9 @@ Leveraging the principles of the [Large Reconstruction Model (LRM)](https://yico
 </div>
 -->
 <p align="center">
-    <img width="800" src="figures/"/>
+    <img width="800" src="figures/Diagram01"/>
+    <img width="800" src="figures/Diagram02"/>
 </p>
-
-<p align="center">
-    <img width="450" src="figures/"/>
-</p>
-
 
 The model is released under the MIT license, which includes the source code, pretrained models, and an interactive online demo. Our goal is to empower researchers, developers, and creatives to push the boundaries of what's possible in 3D generative AI and 3D content creation.
 
