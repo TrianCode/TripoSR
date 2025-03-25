@@ -55,7 +55,7 @@ parser.add_argument(
     "--pretrained-model-name-or-path",
     default="TrianC0de/TripoSR",
     type=str,
-    help="Path to the pretrained model. Could be either a huggingface model id is or a local path. Default: 'stabilityai/TripoSR'",
+    help="Path to the pretrained model. Could be either a huggingface model id is or a local path. Default: 'TrianC0de/TripoSR'",
 )
 parser.add_argument(
     "--chunk-size",
