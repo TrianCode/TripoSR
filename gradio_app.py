@@ -30,10 +30,20 @@ else:
     device = "cpu"
     default_chunk_size = 8192
 
-model = TSR.from_pretrained(
-    "stabilityai/TripoSR",
+# model = TSR.from_pretrained(
+#     "stabilityai/TripoSR",
+#     config_name="config.yaml",
+#     weight_name="model.ckpt",
+# )
+
+model_path = "TrianC0de/TripoSR2"
+
+# Kode kemudian akan memuatnya seperti ini
+model = TripoSR.from_pretrained(
+    model_path,
     config_name="config.yaml",
-    weight_name="model.ckpt",
+    # Anda bisa secara spesifik menunjuk ke file ckpt jika perlu
+    checkpoint_name="sf3d_checkpoint_epoch_3000.ckpt", 
 )
 
 # adjust the chunk size to balance between speed and memory usage
