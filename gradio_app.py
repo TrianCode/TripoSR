@@ -14,6 +14,7 @@ import plotly.graph_objects as go
 import plotly.express as px
 import json
 
+from tsr.system import TripoSR
 from tsr.system import TSR
 from tsr.utils import remove_background, resize_foreground, to_gradio_3d_orientation
 from tsr.evaluation import calculate_metrics
