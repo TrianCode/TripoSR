@@ -204,25 +204,37 @@ class TSR(BaseModule):
             meshes.append(mesh)
         return meshes
         @classmethod
+    @classmethod
+        
     def from_pretrained(cls, model_name_or_path, config_name, weight_name):
         # ... existing code ...
         
         ckpt = torch.load(weight_path, map_location="cpu", weights_only=False)
         
-        # Debug: Print checkpoint structure
-        print("Checkpoint keys:", list(ckpt.keys()))
-        
-        # If checkpoint has nested structure, extract the actual state_dict
-        if 'state_dict' in ckpt:
+        # Extract state dict
+        if isinstance(ckpt, dict) and 'state_dict' in ckpt:
             state_dict = ckpt['state_dict']
-        elif 'model' in ckpt:
-            state_dict = ckpt['model']
-        elif 'model_state_dict' in ckpt:
-            state_dict = ckpt['model_state_dict']
         else:
-            state_dict = ckpt
+            state_dict = ckpt if isinstance(ckpt, dict) else ckpt
         
-        print("State dict keys sample:", list(state_dict.keys())[:10])  # First 10 keys
+        # Remove common prefixes that might cause mismatches
+        cleaned_state_dict = {}
+        for key, value in state_dict.items():
+            # Remove common prefixes
+            new_key = key
+            prefixes_to_remove = ['module.', 'model.', 'backbone.', 'encoder.']
+            for prefix in prefixes_to_remove:
+                if new_key.startswith(prefix):
+                    new_key = new_key[len(prefix):]
+                    break
+            cleaned_state_dict[new_key] = value
         
-        model.load_state_dict(state_dict)
+        # Try loading with cleaned keys
+        missing_keys, unexpected_keys = model.load_state_dict(cleaned_state_dict, strict=False)
+        
+        if missing_keys:
+            print(f"Still missing keys: {missing_keys}")
+        if unexpected_keys:
+            print(f"Unexpected keys: {unexpected_keys}")
+        
         return model
