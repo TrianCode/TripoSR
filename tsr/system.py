@@ -205,36 +205,67 @@ class TSR(BaseModule):
         return meshes
         @classmethod
     @classmethod
+
+
         
+    @classmethod
     def from_pretrained(cls, model_name_or_path, config_name, weight_name):
-        # ... existing code ...
+        if Path(model_name_or_path).exists():
+            config_path = Path(model_name_or_path) / config_name
+            weight_path = Path(model_name_or_path) / weight_name
+        else:
+            config_path = hf_hub_download(model_name_or_path, config_name)
+            weight_path = hf_hub_download(model_name_or_path, weight_name)
         
+        cfg = OmegaConf.load(config_path)
+        OmegaConf.resolve(cfg)
+        model = cls(cfg)
+        
+        # Load checkpoint
         ckpt = torch.load(weight_path, map_location="cpu", weights_only=False)
         
-        # Extract state dict
-        if isinstance(ckpt, dict) and 'state_dict' in ckpt:
+        # Debug: Print checkpoint structure
+        print("Checkpoint keys:", list(ckpt.keys()))
+        
+        # Extract the model state dict from training checkpoint
+        if 'model_state_dict' in ckpt:
+            state_dict = ckpt['model_state_dict']
+            print("Using 'model_state_dict' from checkpoint")
+        elif 'state_dict' in ckpt:
             state_dict = ckpt['state_dict']
+            print("Using 'state_dict' from checkpoint")
+        elif 'model' in ckpt:
+            state_dict = ckpt['model']
+            print("Using 'model' from checkpoint")
         else:
-            state_dict = ckpt if isinstance(ckpt, dict) else ckpt
+            state_dict = ckpt
+            print("Using entire checkpoint as state_dict")
         
-        # Remove common prefixes that might cause mismatches
-        cleaned_state_dict = {}
-        for key, value in state_dict.items():
-            # Remove common prefixes
-            new_key = key
-            prefixes_to_remove = ['module.', 'model.', 'backbone.', 'encoder.']
-            for prefix in prefixes_to_remove:
-                if new_key.startswith(prefix):
-                    new_key = new_key[len(prefix):]
-                    break
-            cleaned_state_dict[new_key] = value
+        print(f"State dict has {len(state_dict)} keys")
+        print("Sample state dict keys:", list(state_dict.keys())[:5])
         
-        # Try loading with cleaned keys
-        missing_keys, unexpected_keys = model.load_state_dict(cleaned_state_dict, strict=False)
-        
-        if missing_keys:
-            print(f"Still missing keys: {missing_keys}")
-        if unexpected_keys:
-            print(f"Unexpected keys: {unexpected_keys}")
+        # Try to load with strict=False to see what happens
+        try:
+            missing_keys, unexpected_keys = model.load_state_dict(state_dict, strict=False)
+            
+            print(f"Missing keys: {len(missing_keys)}")
+            print(f"Unexpected keys: {len(unexpected_keys)}")
+            
+            if missing_keys:
+                print("First 10 missing keys:", missing_keys[:10])
+                
+            if unexpected_keys:
+                print("First 10 unexpected keys:", unexpected_keys[:10])
+                
+            # If there are critical missing keys, warn the user
+            critical_missing = [k for k in missing_keys if any(component in k for component in ['image_tokenizer', 'backbone', 'decoder'])]
+            if critical_missing:
+                print(f"WARNING: {len(critical_missing)} critical model components are missing!")
+                print("This checkpoint may be incomplete or from a different model variant.")
+                print("The model may not work correctly.")
+                
+        except Exception as e:
+            print(f"Error loading state dict: {e}")
+            print("Attempting to continue anyway...")
         
         return model
