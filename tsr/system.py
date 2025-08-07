@@ -212,166 +212,340 @@ class TSR(BaseModule):
     # Ganti method from_pretrained yang ada dengan ini:
     @classmethod
     def from_pretrained(cls, model_name_or_path, config_name, weight_name):
-        if Path(model_name_or_path).exists():
-            config_path = Path(model_name_or_path) / config_name
-            weight_path = Path(model_name_or_path) / weight_name
-        else:
-            config_path = hf_hub_download(model_name_or_path, config_name)
-            weight_path = hf_hub_download(model_name_or_path, weight_name)
+        """
+        Load model from Hugging Face repository
         
+        Args:
+            model_name_or_path: HF repo ID (e.g., "TrianC0de/TripoSR2")
+            config_name: config file name (e.g., "config.yaml")  
+            weight_name: checkpoint file name (e.g., "sf3d_checkpoint_epoch_3000.ckpt")
+        """
+        
+        print(f"Loading model from Hugging Face: {model_name_or_path}")
+        print(f"Config: {config_name}, Weights: {weight_name}")
+        
+        try:
+            # Method 1: Download individual files
+            print("Downloading config file...")
+            config_path = hf_hub_download(
+                repo_id=model_name_or_path,
+                filename=config_name,
+                cache_dir=None,  # Use default HF cache
+                force_download=False  # Use cached version if available
+            )
+            
+            print("Downloading checkpoint file...")
+            weight_path = hf_hub_download(
+                repo_id=model_name_or_path,
+                filename=weight_name,
+                cache_dir=None,
+                force_download=False
+            )
+            
+            print(f"Config downloaded to: {config_path}")
+            print(f"Weights downloaded to: {weight_path}")
+            
+        except Exception as e:
+            print(f"Error downloading from HuggingFace: {e}")
+            print("Trying alternative download method...")
+            
+            # Method 2: Download entire repository
+            try:
+                repo_path = snapshot_download(
+                    repo_id=model_name_or_path,
+                    cache_dir=None,
+                    force_download=False
+                )
+                config_path = os.path.join(repo_path, config_name)
+                weight_path = os.path.join(repo_path, weight_name)
+                
+                print(f"Repository downloaded to: {repo_path}")
+                
+            except Exception as e2:
+                print(f"Repository download also failed: {e2}")
+                raise e2
+        
+        # Verify files exist
+        if not os.path.exists(config_path):
+            raise FileNotFoundError(f"Config file not found: {config_path}")
+        if not os.path.exists(weight_path):
+            raise FileNotFoundError(f"Weight file not found: {weight_path}")
+        
+        # Load config
+        print("Loading configuration...")
         cfg = OmegaConf.load(config_path)
         OmegaConf.resolve(cfg)
+        
+        # Initialize model
+        print("Initializing model...")
         model = cls(cfg)
         
-        print("Loading SF3D checkpoint for TripoSR...")
-        
         # Load checkpoint
-        ckpt = torch.load(weight_path, map_location="cpu", weights_only=False)
+        print("Loading SF3D checkpoint for TripoSR...")
+        print(f"Checkpoint size: {os.path.getsize(weight_path) / (1024*1024):.1f} MB")
+        
+        try:
+            ckpt = torch.load(weight_path, map_location="cpu", weights_only=False)
+        except Exception as e:
+            print(f"Error loading checkpoint: {e}")
+            # Try with weights_only=True
+            try:
+                ckpt = torch.load(weight_path, map_location="cpu", weights_only=True)
+            except Exception as e2:
+                print(f"Failed with both loading methods: {e2}")
+                raise e2
         
         # Debug checkpoint structure
-        print("Checkpoint keys:", list(ckpt.keys()))
+        print("\n=== CHECKPOINT ANALYSIS ===")
+        print("Top-level keys:", list(ckpt.keys()))
         
         # Extract model state dict
         if 'model_state_dict' in ckpt:
             sf3d_state_dict = ckpt['model_state_dict']
-            print("Using 'model_state_dict' from SF3D checkpoint")
+            print("✓ Using 'model_state_dict' from SF3D checkpoint")
         elif 'state_dict' in ckpt:
-            sf3d_state_dict = ckpt['state_dict']
-            print("Using 'state_dict' from SF3D checkpoint")
-        else:
+            sf3d_state_dict = ckpt['state_dict']  
+            print("✓ Using 'state_dict' from SF3D checkpoint")
+        elif isinstance(ckpt, dict) and any('.' in k for k in ckpt.keys()):
             sf3d_state_dict = ckpt
-            print("Using entire checkpoint as state_dict")
+            print("✓ Using entire checkpoint as state_dict (direct parameters)")
+        else:
+            print("❌ Could not find model parameters in checkpoint")
+            print("Available keys:", list(ckpt.keys())[:10])
+            raise ValueError("Invalid checkpoint format")
         
         print(f"SF3D state dict has {len(sf3d_state_dict)} parameters")
         
-        # Analisis parameter groups dari SF3D
+        # Analyze SF3D parameter structure
         sf3d_param_groups = {}
-        for key in sf3d_state_dict.keys():
+        sample_keys = []
+        
+        for i, key in enumerate(sf3d_state_dict.keys()):
+            # Group by first component
             prefix = key.split('.')[0] if '.' in key else key
             if prefix not in sf3d_param_groups:
-                sf3d_param_groups[prefix] = 0
-            sf3d_param_groups[prefix] += 1
+                sf3d_param_groups[prefix] = []
+            sf3d_param_groups[prefix].append(key)
+            
+            # Collect samples
+            if i < 10:
+                sample_keys.append(key)
         
-        print("SF3D parameter groups:")
-        for group, count in sf3d_param_groups.items():
-            print(f"  {group}: {count} parameters")
+        print("\nSF3D parameter groups:")
+        for group, keys in sf3d_param_groups.items():
+            print(f"  {group}: {len(keys)} parameters")
+            if len(keys) <= 3:
+                print(f"    Keys: {keys}")
+            else:
+                print(f"    Sample: {keys[:3]} ...")
         
-        # Get TripoSR expected keys
-        triposr_keys = set(model.state_dict().keys())
+        # Get TripoSR expected structure
+        triposr_state_dict = model.state_dict()
+        triposr_keys = set(triposr_state_dict.keys())
         sf3d_keys = set(sf3d_state_dict.keys())
         
-        print(f"\nTripoSR expects {len(triposr_keys)} parameters")
-        print(f"SF3D provides {len(sf3d_keys)} parameters")
+        print(f"\n=== MODEL COMPATIBILITY ===")
+        print(f"TripoSR expects: {len(triposr_keys)} parameters")
+        print(f"SF3D provides: {len(sf3d_keys)} parameters")
         
-        # Convert SF3D keys to TripoSR format
+        # Analyze TripoSR structure
+        triposr_param_groups = {}
+        for key in triposr_keys:
+            prefix = key.split('.')[0] if '.' in key else key
+            if prefix not in triposr_param_groups:
+                triposr_param_groups[prefix] = []
+            triposr_param_groups[prefix].append(key)
+        
+        print("\nTripoSR expected groups:")
+        for group, keys in triposr_param_groups.items():
+            print(f"  {group}: {len(keys)} parameters")
+        
+        # Start conversion process
+        print(f"\n=== CONVERSION PROCESS ===")
         converted_state_dict = {}
         used_sf3d_keys = set()
         
-        # 1. Direct matches
+        # Strategy 1: Direct matches
         direct_matches = triposr_keys.intersection(sf3d_keys)
         print(f"Direct matches: {len(direct_matches)}")
         for key in direct_matches:
             converted_state_dict[key] = sf3d_state_dict[key]
             used_sf3d_keys.add(key)
         
-        # 2. Try different prefix mappings
-        mapping_strategies = [
-            # Remove model prefix
-            lambda k: k.replace('model.', '') if k.startswith('model.') else None,
-            # Add model prefix
-            lambda k: f'model.{k}' if f'model.{k}' in sf3d_keys else None,
-            # Decoder specific mappings
-            lambda k: k.replace('decoder.layers.', 'model.decoder.layers.') if k.startswith('decoder.layers.') else None,
-            lambda k: k.replace('model.decoder.layers.', 'decoder.layers.') if k.startswith('model.decoder.layers.') else None,
-            # Backbone mappings
-            lambda k: k.replace('backbone.', 'model.backbone.') if k.startswith('backbone.') else None,
-            lambda k: k.replace('model.backbone.', 'backbone.') if k.startswith('model.backbone.') else None,
-            # Post processor mappings
-            lambda k: k.replace('post_processor.', 'model.post_processor.') if k.startswith('post_processor.') else None,
-            lambda k: k.replace('model.post_processor.', 'post_processor.') if k.startswith('model.post_processor.') else None,
+        # Strategy 2: Prefix transformations
+        prefix_mappings = [
+            # Remove model prefix from SF3D
+            (r'^model\.', ''),
+            # Add model prefix for TripoSR
+            (r'^(?!model\.)', 'model.'),
+            # Specific component mappings
+            (r'^model\.decoder\.', 'decoder.'),
+            (r'^decoder\.', 'model.decoder.'),
+            (r'^model\.backbone\.', 'backbone.'),
+            (r'^backbone\.', 'model.backbone.'),
+            (r'^model\.post_processor\.', 'post_processor.'),
+            (r'^post_processor\.', 'model.post_processor.'),
+            # Head -> decoder mapping (common in SF3D)
+            (r'^model\.head\.', 'decoder.'),
+            (r'^head\.', 'decoder.'),
+            # Transformer specific
+            (r'^model\.transformer\.', 'backbone.transformer_blocks.'),
+            (r'^transformer\.', 'backbone.transformer_blocks.'),
         ]
+        
+        import re
         
         for triposr_key in triposr_keys:
             if triposr_key in converted_state_dict:
                 continue
                 
-            for strategy in mapping_strategies:
-                mapped_key = strategy(triposr_key)
-                if mapped_key and mapped_key in sf3d_state_dict:
-                    converted_state_dict[triposr_key] = sf3d_state_dict[mapped_key]
-                    used_sf3d_keys.add(mapped_key)
+            for pattern, replacement in prefix_mappings:
+                # Try forward mapping (TripoSR key -> SF3D key)
+                sf3d_candidate = re.sub(pattern, replacement, triposr_key)
+                if sf3d_candidate in sf3d_state_dict:
+                    converted_state_dict[triposr_key] = sf3d_state_dict[sf3d_candidate]
+                    used_sf3d_keys.add(sf3d_candidate)
                     break
-        
-        # 3. Handle specific component mappings
-        # Decoder layers
-        for triposr_key in triposr_keys:
-            if triposr_key.startswith('decoder.layers.') and triposr_key not in converted_state_dict:
-                # Try different decoder patterns
-                patterns = [
-                    f"model.{triposr_key}",
-                    triposr_key.replace('decoder.layers.', 'model.head.layers.'),
-                    triposr_key.replace('decoder.layers.', 'head.layers.'),
-                    triposr_key.replace('decoder.layers.', 'model.decoder.'),
-                ]
-                for pattern in patterns:
-                    if pattern in sf3d_state_dict:
-                        converted_state_dict[triposr_key] = sf3d_state_dict[pattern]
-                        used_sf3d_keys.add(pattern)
+                
+                # Try reverse mapping (remove pattern from SF3D key)
+                for sf3d_key in sf3d_state_dict.keys():
+                    if sf3d_key in used_sf3d_keys:
+                        continue
+                    reverse_mapped = re.sub(replacement if replacement else r'^model\.', pattern.replace('^', ''), sf3d_key)
+                    if reverse_mapped == triposr_key:
+                        converted_state_dict[triposr_key] = sf3d_state_dict[sf3d_key]
+                        used_sf3d_keys.add(sf3d_key)
                         break
         
-        print(f"\nConversion results:")
-        print(f"  Converted: {len(converted_state_dict)} / {len(triposr_keys)} TripoSR parameters")
-        print(f"  Used: {len(used_sf3d_keys)} / {len(sf3d_keys)} SF3D parameters")
+        # Strategy 3: Shape-based matching for remaining keys
+        remaining_triposr = triposr_keys - set(converted_state_dict.keys())
+        remaining_sf3d = sf3d_keys - used_sf3d_keys
+        
+        if remaining_triposr and remaining_sf3d:
+            print(f"Attempting shape-based matching for {len(remaining_triposr)} remaining keys...")
+            
+            for triposr_key in list(remaining_triposr):
+                triposr_shape = triposr_state_dict[triposr_key].shape
+                
+                for sf3d_key in list(remaining_sf3d):
+                    if sf3d_state_dict[sf3d_key].shape == triposr_shape:
+                        # Additional check: similar name patterns
+                        triposr_parts = triposr_key.split('.')
+                        sf3d_parts = sf3d_key.split('.')
+                        
+                        # Check if they share similar ending (layer type)
+                        if triposr_parts[-1] == sf3d_parts[-1] or triposr_parts[-2:] == sf3d_parts[-2:]:
+                            converted_state_dict[triposr_key] = sf3d_state_dict[sf3d_key]
+                            used_sf3d_keys.add(sf3d_key)
+                            remaining_triposr.remove(triposr_key)
+                            remaining_sf3d.remove(sf3d_key)
+                            break
+        
+        print(f"\n=== CONVERSION RESULTS ===")
+        print(f"Successfully converted: {len(converted_state_dict)} / {len(triposr_keys)} TripoSR parameters")
+        print(f"Used from SF3D: {len(used_sf3d_keys)} / {len(sf3d_keys)} SF3D parameters")
+        
+        unused_sf3d = sf3d_keys - used_sf3d_keys
+        missing_triposr = triposr_keys - set(converted_state_dict.keys())
+        
+        if unused_sf3d:
+            print(f"Unused SF3D keys: {len(unused_sf3d)}")
+            print(f"  Examples: {list(unused_sf3d)[:5]}")
+        
+        if missing_triposr:
+            print(f"Missing TripoSR keys: {len(missing_triposr)}")
+            print(f"  Examples: {list(missing_triposr)[:5]}")
+            
+            # Group missing keys by component
+            missing_by_component = {}
+            for key in missing_triposr:
+                component = key.split('.')[0]
+                missing_by_component[component] = missing_by_component.get(component, 0) + 1
+            
+            print("Missing keys by component:")
+            for component, count in missing_by_component.items():
+                print(f"  {component}: {count} parameters")
         
         # Load converted weights
+        print(f"\n=== LOADING WEIGHTS ===")
         missing_keys, unexpected_keys = model.load_state_dict(converted_state_dict, strict=False)
         
-        print(f"\nLoading results:")
+        print(f"PyTorch loading results:")
         print(f"  Missing keys: {len(missing_keys)}")
         print(f"  Unexpected keys: {len(unexpected_keys)}")
         
         if missing_keys:
-            print("Missing key examples:", missing_keys[:5])
-            
-            # Group missing keys by component
-            missing_by_component = {}
-            for key in missing_keys:
-                component = key.split('.')[0]
-                if component not in missing_by_component:
-                    missing_by_component[component] = 0
-                missing_by_component[component] += 1
-            
-            print("Missing keys by component:")
-            for component, count in missing_by_component.items():
-                print(f"  {component}: {count} keys")
-            
-            # Initialize missing components
-            if 'image_tokenizer' in missing_by_component:
-                print("WARNING: image_tokenizer missing - will be randomly initialized")
-                print("Consider using a pretrained ViT for better results")
-            
-            if 'backbone' in missing_by_component:
-                print("WARNING: backbone components missing - will be randomly initialized")
-        
+            print("  Missing examples:", missing_keys[:3])
         if unexpected_keys:
-            print("Unexpected key examples:", unexpected_keys[:5])
+            print("  Unexpected examples:", unexpected_keys[:3])
         
-        # Initialize any remaining missing parameters
-        with torch.no_grad():
-            for name, param in model.named_parameters():
-                if param.requires_grad and torch.allclose(param, torch.zeros_like(param)):
-                    if 'weight' in name and len(param.shape) >= 2:
-                        torch.nn.init.xavier_uniform_(param)
-                    elif 'weight' in name:
-                        torch.nn.init.normal_(param, std=0.02)
-                    elif 'bias' in name:
+        # Initialize missing parameters
+        if missing_keys:
+            print(f"\n=== INITIALIZING MISSING PARAMETERS ===")
+            
+            initialization_stats = {
+                'image_tokenizer': 0,
+                'backbone': 0, 
+                'decoder': 0,
+                'post_processor': 0,
+                'other': 0
+            }
+            
+            with torch.no_grad():
+                for key in missing_keys:
+                    param = dict(model.named_parameters())[key]
+                    
+                    # Determine component
+                    component = 'other'
+                    for comp in ['image_tokenizer', 'backbone', 'decoder', 'post_processor']:
+                        if comp in key:
+                            component = comp
+                            break
+                    
+                    initialization_stats[component] += 1
+                    
+                    # Initialize based on parameter type
+                    if 'weight' in key:
+                        if len(param.shape) >= 2:
+                            torch.nn.init.xavier_uniform_(param)
+                        else:
+                            torch.nn.init.normal_(param, std=0.02)
+                    elif 'bias' in key:
                         torch.nn.init.zeros_(param)
-                    elif 'embeddings' in name:
+                    elif 'embeddings' in key or 'embed' in key:
                         torch.nn.init.normal_(param, std=0.02)
+                    elif 'norm' in key:
+                        if 'weight' in key:
+                            torch.nn.init.ones_(param)
+                        else:
+                            torch.nn.init.zeros_(param)
+            
+            print("Initialized parameters by component:")
+            for component, count in initialization_stats.items():
+                if count > 0:
+                    print(f"  {component}: {count} parameters")
         
-        print("Model loading completed!")
-        return model
-            print(f"Error loading state dict: {e}")
-            print("Attempting to continue anyway...")
+        print(f"\n=== LOADING COMPLETE ===")
+        print("✓ Model successfully loaded with SF3D checkpoint")
+        
+        if missing_keys:
+            print(f"⚠️  Warning: {len(missing_keys)} parameters were randomly initialized")
+            print("   Consider fine-tuning or using a more compatible checkpoint")
         
         return model
+    
+    
+    # Helper function to debug HuggingFace repository
+    def debug_hf_repository(repo_id):
+        """Debug helper to inspect HuggingFace repository contents"""
+        from huggingface_hub import list_repo_files
+        
+        try:
+            files = list_repo_files(repo_id)
+            print(f"Files in {repo_id}:")
+            for file in sorted(files):
+                print(f"  {file}")
+            return files
+        except Exception as e:
+            print(f"Error accessing repository {repo_id}: {e}")
+            return []
