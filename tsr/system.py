@@ -203,3 +203,26 @@ class TSR(BaseModule):
             )
             meshes.append(mesh)
         return meshes
+        @classmethod
+    def from_pretrained(cls, model_name_or_path, config_name, weight_name):
+        # ... existing code ...
+        
+        ckpt = torch.load(weight_path, map_location="cpu", weights_only=False)
+        
+        # Debug: Print checkpoint structure
+        print("Checkpoint keys:", list(ckpt.keys()))
+        
+        # If checkpoint has nested structure, extract the actual state_dict
+        if 'state_dict' in ckpt:
+            state_dict = ckpt['state_dict']
+        elif 'model' in ckpt:
+            state_dict = ckpt['model']
+        elif 'model_state_dict' in ckpt:
+            state_dict = ckpt['model_state_dict']
+        else:
+            state_dict = ckpt
+        
+        print("State dict keys sample:", list(state_dict.keys())[:10])  # First 10 keys
+        
+        model.load_state_dict(state_dict)
+        return model
