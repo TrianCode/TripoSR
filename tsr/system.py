@@ -12,6 +12,7 @@ from einops import rearrange
 from huggingface_hub import hf_hub_download
 from omegaconf import OmegaConf
 from PIL import Image
+from pathlib import Path
 
 from .models.isosurface import MarchingCubeHelper
 from .utils import (
@@ -208,6 +209,7 @@ class TSR(BaseModule):
 
 
         
+    # Ganti method from_pretrained yang ada dengan ini:
     @classmethod
     def from_pretrained(cls, model_name_or_path, config_name, weight_name):
         if Path(model_name_or_path).exists():
@@ -221,50 +223,154 @@ class TSR(BaseModule):
         OmegaConf.resolve(cfg)
         model = cls(cfg)
         
+        print("Loading SF3D checkpoint for TripoSR...")
+        
         # Load checkpoint
         ckpt = torch.load(weight_path, map_location="cpu", weights_only=False)
         
-        # Debug: Print checkpoint structure
+        # Debug checkpoint structure
         print("Checkpoint keys:", list(ckpt.keys()))
         
-        # Extract the model state dict from training checkpoint
+        # Extract model state dict
         if 'model_state_dict' in ckpt:
-            state_dict = ckpt['model_state_dict']
-            print("Using 'model_state_dict' from checkpoint")
+            sf3d_state_dict = ckpt['model_state_dict']
+            print("Using 'model_state_dict' from SF3D checkpoint")
         elif 'state_dict' in ckpt:
-            state_dict = ckpt['state_dict']
-            print("Using 'state_dict' from checkpoint")
-        elif 'model' in ckpt:
-            state_dict = ckpt['model']
-            print("Using 'model' from checkpoint")
+            sf3d_state_dict = ckpt['state_dict']
+            print("Using 'state_dict' from SF3D checkpoint")
         else:
-            state_dict = ckpt
+            sf3d_state_dict = ckpt
             print("Using entire checkpoint as state_dict")
         
-        print(f"State dict has {len(state_dict)} keys")
-        print("Sample state dict keys:", list(state_dict.keys())[:5])
+        print(f"SF3D state dict has {len(sf3d_state_dict)} parameters")
         
-        # Try to load with strict=False to see what happens
-        try:
-            missing_keys, unexpected_keys = model.load_state_dict(state_dict, strict=False)
+        # Analisis parameter groups dari SF3D
+        sf3d_param_groups = {}
+        for key in sf3d_state_dict.keys():
+            prefix = key.split('.')[0] if '.' in key else key
+            if prefix not in sf3d_param_groups:
+                sf3d_param_groups[prefix] = 0
+            sf3d_param_groups[prefix] += 1
+        
+        print("SF3D parameter groups:")
+        for group, count in sf3d_param_groups.items():
+            print(f"  {group}: {count} parameters")
+        
+        # Get TripoSR expected keys
+        triposr_keys = set(model.state_dict().keys())
+        sf3d_keys = set(sf3d_state_dict.keys())
+        
+        print(f"\nTripoSR expects {len(triposr_keys)} parameters")
+        print(f"SF3D provides {len(sf3d_keys)} parameters")
+        
+        # Convert SF3D keys to TripoSR format
+        converted_state_dict = {}
+        used_sf3d_keys = set()
+        
+        # 1. Direct matches
+        direct_matches = triposr_keys.intersection(sf3d_keys)
+        print(f"Direct matches: {len(direct_matches)}")
+        for key in direct_matches:
+            converted_state_dict[key] = sf3d_state_dict[key]
+            used_sf3d_keys.add(key)
+        
+        # 2. Try different prefix mappings
+        mapping_strategies = [
+            # Remove model prefix
+            lambda k: k.replace('model.', '') if k.startswith('model.') else None,
+            # Add model prefix
+            lambda k: f'model.{k}' if f'model.{k}' in sf3d_keys else None,
+            # Decoder specific mappings
+            lambda k: k.replace('decoder.layers.', 'model.decoder.layers.') if k.startswith('decoder.layers.') else None,
+            lambda k: k.replace('model.decoder.layers.', 'decoder.layers.') if k.startswith('model.decoder.layers.') else None,
+            # Backbone mappings
+            lambda k: k.replace('backbone.', 'model.backbone.') if k.startswith('backbone.') else None,
+            lambda k: k.replace('model.backbone.', 'backbone.') if k.startswith('model.backbone.') else None,
+            # Post processor mappings
+            lambda k: k.replace('post_processor.', 'model.post_processor.') if k.startswith('post_processor.') else None,
+            lambda k: k.replace('model.post_processor.', 'post_processor.') if k.startswith('model.post_processor.') else None,
+        ]
+        
+        for triposr_key in triposr_keys:
+            if triposr_key in converted_state_dict:
+                continue
+                
+            for strategy in mapping_strategies:
+                mapped_key = strategy(triposr_key)
+                if mapped_key and mapped_key in sf3d_state_dict:
+                    converted_state_dict[triposr_key] = sf3d_state_dict[mapped_key]
+                    used_sf3d_keys.add(mapped_key)
+                    break
+        
+        # 3. Handle specific component mappings
+        # Decoder layers
+        for triposr_key in triposr_keys:
+            if triposr_key.startswith('decoder.layers.') and triposr_key not in converted_state_dict:
+                # Try different decoder patterns
+                patterns = [
+                    f"model.{triposr_key}",
+                    triposr_key.replace('decoder.layers.', 'model.head.layers.'),
+                    triposr_key.replace('decoder.layers.', 'head.layers.'),
+                    triposr_key.replace('decoder.layers.', 'model.decoder.'),
+                ]
+                for pattern in patterns:
+                    if pattern in sf3d_state_dict:
+                        converted_state_dict[triposr_key] = sf3d_state_dict[pattern]
+                        used_sf3d_keys.add(pattern)
+                        break
+        
+        print(f"\nConversion results:")
+        print(f"  Converted: {len(converted_state_dict)} / {len(triposr_keys)} TripoSR parameters")
+        print(f"  Used: {len(used_sf3d_keys)} / {len(sf3d_keys)} SF3D parameters")
+        
+        # Load converted weights
+        missing_keys, unexpected_keys = model.load_state_dict(converted_state_dict, strict=False)
+        
+        print(f"\nLoading results:")
+        print(f"  Missing keys: {len(missing_keys)}")
+        print(f"  Unexpected keys: {len(unexpected_keys)}")
+        
+        if missing_keys:
+            print("Missing key examples:", missing_keys[:5])
             
-            print(f"Missing keys: {len(missing_keys)}")
-            print(f"Unexpected keys: {len(unexpected_keys)}")
+            # Group missing keys by component
+            missing_by_component = {}
+            for key in missing_keys:
+                component = key.split('.')[0]
+                if component not in missing_by_component:
+                    missing_by_component[component] = 0
+                missing_by_component[component] += 1
             
-            if missing_keys:
-                print("First 10 missing keys:", missing_keys[:10])
-                
-            if unexpected_keys:
-                print("First 10 unexpected keys:", unexpected_keys[:10])
-                
-            # If there are critical missing keys, warn the user
-            critical_missing = [k for k in missing_keys if any(component in k for component in ['image_tokenizer', 'backbone', 'decoder'])]
-            if critical_missing:
-                print(f"WARNING: {len(critical_missing)} critical model components are missing!")
-                print("This checkpoint may be incomplete or from a different model variant.")
-                print("The model may not work correctly.")
-                
-        except Exception as e:
+            print("Missing keys by component:")
+            for component, count in missing_by_component.items():
+                print(f"  {component}: {count} keys")
+            
+            # Initialize missing components
+            if 'image_tokenizer' in missing_by_component:
+                print("WARNING: image_tokenizer missing - will be randomly initialized")
+                print("Consider using a pretrained ViT for better results")
+            
+            if 'backbone' in missing_by_component:
+                print("WARNING: backbone components missing - will be randomly initialized")
+        
+        if unexpected_keys:
+            print("Unexpected key examples:", unexpected_keys[:5])
+        
+        # Initialize any remaining missing parameters
+        with torch.no_grad():
+            for name, param in model.named_parameters():
+                if param.requires_grad and torch.allclose(param, torch.zeros_like(param)):
+                    if 'weight' in name and len(param.shape) >= 2:
+                        torch.nn.init.xavier_uniform_(param)
+                    elif 'weight' in name:
+                        torch.nn.init.normal_(param, std=0.02)
+                    elif 'bias' in name:
+                        torch.nn.init.zeros_(param)
+                    elif 'embeddings' in name:
+                        torch.nn.init.normal_(param, std=0.02)
+        
+        print("Model loading completed!")
+        return model
             print(f"Error loading state dict: {e}")
             print("Attempting to continue anyway...")
         
