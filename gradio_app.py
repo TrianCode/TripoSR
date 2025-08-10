@@ -1084,18 +1084,18 @@ def generate(image, mc_resolution, reference_model=None, formats=["obj", "glb"],
                 # Generate with both models
                 scene_codes_original = model_original(image, device=device)
                 # Kode baru yang benar
-                 meshes_original, _ = model_original.extract_mesh(
-                     scene_codes_original, 
-                     True, 
-                     resolution=min(mc_resolution, 192)
-                 )
+                meshes_original, _ = model_original.extract_mesh(
+                    scene_codes_original, 
+                    True, 
+                    resolution=min(mc_resolution, 192)
+                )
                 mesh_original = meshes_original[0]
-                # ... baris kode lainnya ...
-                 meshes_custom, _ = model_custom.extract_mesh(
-                     scene_codes_custom, 
-                     True, 
-                     resolution=min(mc_resolution, 192)
-                 )
+                
+                meshes_custom, _ = model_custom.extract_mesh(
+                    scene_codes_custom, 
+                    True, 
+                    resolution=min(mc_resolution, 192)
+                )
                 mesh_custom = meshes_custom[0]
                 
                 # mesh_original = model_original.extract_mesh(
