@@ -776,14 +776,56 @@ def ensemble_meshes(mesh1, mesh2, blend_method="weighted_average", weight1=0.5, 
     
     return combined_mesh
 
+# def spatial_blend_meshes(mesh1, mesh2, weight1, weight2):
+#     """
+#     Blend meshes by creating a new mesh that combines spatial information
+#     """
+#     # Sample points from both meshes
+#     n_samples = 10000
+#     points1, _ = mesh1.sample(n_samples)
+#     points2, _ = mesh2.sample(n_samples)
+    
+#     # Combine sampled points with weights
+#     combined_points = np.concatenate([
+#         points1 * weight1,
+#         points2 * weight2
+#     ])
+    
+#     # Create a new mesh using marching cubes or convex hull
+#     try:
+#         # Use convex hull as a simple approach
+#         combined_mesh = trimesh.convex.convex_hull(combined_points)
+#     except:
+#         # Fallback: use alpha shape or return first mesh
+#         combined_mesh = mesh1
+    
+#     return combined_mesh
+
+# GANTI TOTAL FUNGSI SPATIAL_BLEND_MESHES ANDA DENGAN YANG DI BAWAH INI
+
 def spatial_blend_meshes(mesh1, mesh2, weight1, weight2):
     """
-    Blend meshes by creating a new mesh that combines spatial information
+    Blend meshes by creating a new mesh that combines spatial information.
+    This version is robust against different trimesh API versions.
     """
-    # Sample points from both meshes
     n_samples = 10000
-    points1, _ = mesh1.sample(n_samples)
-    points2, _ = mesh2.sample(n_samples)
+
+    # --- Defensive sampling for mesh1 ---
+    sample1_result = mesh1.sample(n_samples)
+    # Check if the result is a tuple (like (points, faces))
+    if isinstance(sample1_result, tuple):
+        # If yes, take the first element which is the points
+        points1 = sample1_result[0]
+    else:
+        # If no, assume the result is the points array itself
+        points1 = sample1_result
+
+    # --- Defensive sampling for mesh2 ---
+    sample2_result = mesh2.sample(n_samples)
+    if isinstance(sample2_result, tuple):
+        points2 = sample2_result[0]
+    else:
+        points2 = sample2_result
     
     # Combine sampled points with weights
     combined_points = np.concatenate([
