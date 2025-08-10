@@ -1053,36 +1053,65 @@ def generate(image, mc_resolution, reference_model=None, formats=["obj", "glb"],
             if use_model == "Original Only":
                 # Use only original model
                 scene_codes = model_original(image, device=device)
-                mesh = model_original.extract_mesh(
+                meshes, _ = model_original.extract_mesh(
                     scene_codes, 
                     True, 
                     resolution=min(mc_resolution, 192)
-                )[0]
+                )
+                mesh = meshes[0]
+                # mesh = model_original.extract_mesh(
+                #     scene_codes, 
+                #     True, 
+                #     resolution=min(mc_resolution, 192)
+                # )[0]
                 
             elif use_model == "Custom Only":
                 # Use only custom model
                 scene_codes = model_custom(image, device=device)
-                mesh = model_custom.extract_mesh(
+                meshes, _ = model_custom.extract_mesh(
                     scene_codes, 
                     True, 
                     resolution=min(mc_resolution, 192)
-                )[0]
+                )
+                mesh = meshes[0]
+                # mesh = model_custom.extract_mesh(
+                #     scene_codes, 
+                #     True, 
+                #     resolution=min(mc_resolution, 192)
+                # )[0]
                 
             else:  # "Both" - Ensemble approach
                 # Generate with both models
                 scene_codes_original = model_original(image, device=device)
-                mesh_original = model_original.extract_mesh(
-                    scene_codes_original, 
-                    True, 
-                    resolution=min(mc_resolution, 192)
-                )[0]
+                # Kode baru yang benar
+                 meshes_original, _ = model_original.extract_mesh(
+                     scene_codes_original, 
+                     True, 
+                     resolution=min(mc_resolution, 192)
+                 )
+                mesh_original = meshes_original[0]
+                # ... baris kode lainnya ...
+                 meshes_custom, _ = model_custom.extract_mesh(
+                     scene_codes_custom, 
+                     True, 
+                     resolution=min(mc_resolution, 192)
+                 )
+                mesh_custom = meshes_custom[0]
                 
-                scene_codes_custom = model_custom(image, device=device)
-                mesh_custom = model_custom.extract_mesh(
-                    scene_codes_custom, 
-                    True, 
-                    resolution=min(mc_resolution, 192)
-                )[0]
+                # mesh_original = model_original.extract_mesh(
+                #     scene_codes_original, 
+                #     True, 
+                #     resolution=min(mc_resolution, 192)
+                # )[0]
+                
+                
+                # scene_codes_custom = model_custom(image, device=device)
+                # mesh_custom = model_custom.extract_mesh(
+                #     scene_codes_custom, 
+                #     True, 
+                #     resolution=min(mc_resolution, 192)
+                # )[0]
+
                 
                 # Combine the two meshes
                 weight_original = model_weight
