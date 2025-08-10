@@ -1231,6 +1231,41 @@ def run_example(image_pil):
     )
     return preprocessed, mesh_obj, mesh_glb, f1, uhd, tmd, cd, iou, metrics_text, radar_chart, bar_chart
 
+def run_generation_pipeline(
+    input_image, do_remove_background, foreground_ratio, 
+    mc_resolution, reference_model, model_quality, 
+    texture_quality, smoothing_factor, use_model, 
+    blend_method, model_weight
+):
+    """
+    A single function to handle the complete generation process from a Gradio button click.
+    """
+    # 1. Input Validation (raises gr.Error on failure, stopping execution)
+    check_input_image(input_image)
+
+    # 2. Preprocess the image once
+    processed_image = preprocess(input_image, do_remove_background, foreground_ratio)
+
+    # 3. Generate the 3D model and metrics. 
+    # The 'generate' function returns a list of 10 items.
+    generation_results = generate(
+        processed_image,
+        mc_resolution,
+        reference_model,
+        ["obj", "glb"],  # Explicitly define formats
+        model_quality,
+        texture_quality,
+        smoothing_factor,
+        use_model,
+        blend_method,
+        model_weight
+    )
+
+    # 4. Return all outputs in a single list.
+    # The first item is the processed image, followed by the 10 items from generate.
+    # This creates a final list of 11 items that matches the UI outputs.
+    return [processed_image] + generation_results
+
 with gr.Blocks(title="Dual Model 3D Generation") as interface:
     gr.Markdown(
         """    
@@ -1515,41 +1550,6 @@ Unggah gambar untuk menghasilkan model 3D menggunakan model original TripoSR, mo
         inputs=[use_model],
         outputs=[model_weight, blend_method]
     )
-
-    def run_generation_pipeline(
-        input_image, do_remove_background, foreground_ratio, 
-        mc_resolution, reference_model, model_quality, 
-        texture_quality, smoothing_factor, use_model, 
-        blend_method, model_weight
-    ):
-        """
-        A single function to handle the complete generation process from a Gradio button click.
-        """
-        # 1. Input Validation (raises gr.Error on failure, stopping execution)
-        check_input_image(input_image)
-    
-        # 2. Preprocess the image once
-        processed_image = preprocess(input_image, do_remove_background, foreground_ratio)
-    
-        # 3. Generate the 3D model and metrics. 
-        # The 'generate' function returns a list of 10 items.
-        generation_results = generate(
-            processed_image,
-            mc_resolution,
-            reference_model,
-            ["obj", "glb"],  # Explicitly define formats
-            model_quality,
-            texture_quality,
-            smoothing_factor,
-            use_model,
-            blend_method,
-            model_weight
-        )
-    
-        # 4. Return all outputs in a single list.
-        # The first item is the processed image, followed by the 10 items from generate.
-        # This creates a final list of 11 items that matches the UI outputs.
-        return [processed_image] + generation_results
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
