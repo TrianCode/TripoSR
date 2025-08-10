@@ -1286,17 +1286,19 @@ def generate(image, mc_resolution, reference_model=None, formats=["obj", "glb"],
         with torch.inference_mode():
             if use_model == "Original Only":
                 scene_codes = model_original(image, device=device)
-                # Panggil fungsi sesuai versi lama: tanpa 'return_textures'
+                # Tambahkan argumen 'has_vertex_color' yang dibutuhkan
                 mesh = model_original.extract_mesh(
                     scene_codes, 
+                    True, # Ini untuk has_vertex_color
                     resolution=min(mc_resolution, 192)
                 )[0]
                 
             elif use_model == "Custom Only":
                 scene_codes = model_custom(image, device=device)
-                # Panggil fungsi sesuai versi lama: tanpa 'return_textures'
+                # Tambahkan argumen 'has_vertex_color' yang dibutuhkan
                 mesh = model_custom.extract_mesh(
                     scene_codes, 
+                    True, # Ini untuk has_vertex_color
                     resolution=min(mc_resolution, 192)
                 )[0]
 
@@ -1304,12 +1306,14 @@ def generate(image, mc_resolution, reference_model=None, formats=["obj", "glb"],
                 scene_codes_original = model_original(image, device=device)
                 mesh_original = model_original.extract_mesh(
                     scene_codes_original, 
+                    True, # Ini untuk has_vertex_color
                     resolution=min(mc_resolution, 192)
                 )[0]
                 
                 scene_codes_custom = model_custom(image, device=device)
                 mesh_custom = model_custom.extract_mesh(
                     scene_codes_custom, 
+                    True, # Ini untuk has_vertex_color
                     resolution=min(mc_resolution, 192)
                 )[0]
                 
