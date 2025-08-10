@@ -1089,13 +1089,22 @@ def generate(image, mc_resolution, reference_model=None, formats=["obj", "glb"],
                 #     True, 
                 #     resolution=min(mc_resolution, 192)
                 # )[0]
-                
             else:  # "Both" - Ensemble approach
-                # Generate with both models
                 scene_codes_original = model_original(image, device=device)
-                # Kode baru yang benar
                 mesh_original = safe_extract_mesh(model_original, scene_codes_original, min(mc_resolution, 192))
+                
+                scene_codes_custom = model_custom(image, device=device)
                 mesh_custom = safe_extract_mesh(model_custom, scene_codes_custom, min(mc_resolution, 192))
+                weight_original = model_weight
+                weight_custom = 1.0 - model_weight
+                
+                mesh = ensemble_meshes(
+                    mesh_original, 
+                    mesh_custom, 
+                    blend_method=blend_method,
+                    weight1=weight_original, 
+                    weight2=weight_custom
+                )    
                 
                 # mesh_original = model_original.extract_mesh(
                 #     scene_codes_original, 
@@ -1113,16 +1122,16 @@ def generate(image, mc_resolution, reference_model=None, formats=["obj", "glb"],
 
                 
                 # Combine the two meshes
-                weight_original = model_weight
-                weight_custom = 1.0 - model_weight
+                # weight_original = model_weight
+                # weight_custom = 1.0 - model_weight
                 
-                mesh = ensemble_meshes(
-                    mesh_original, 
-                    mesh_custom, 
-                    blend_method=blend_method,
-                    weight1=weight_original, 
-                    weight2=weight_custom
-                )
+                # mesh = ensemble_meshes(
+                #     mesh_original, 
+                #     mesh_custom, 
+                #     blend_method=blend_method,
+                #     weight1=weight_original, 
+                #     weight2=weight_custom
+                # )
         
         mesh = to_gradio_3d_orientation(mesh)
         mesh = fix_model_orientation(mesh)
