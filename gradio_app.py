@@ -1024,37 +1024,253 @@ def fix_model_orientation(mesh):
 
     return mesh
     
-def safe_extract_mesh(model, scene_codes, resolution):
-    """
-    Safely extracts the first mesh from the model output,
-    handling both old (list) and new (tuple) API formats.
-    """
-    result = model.extract_mesh(
-        scene_codes,
-        True,
-        resolution=resolution
-    )
+# def safe_extract_mesh(model, scene_codes, resolution):
+#     """
+#     Safely extracts the first mesh from the model output,
+#     handling both old (list) and new (tuple) API formats.
+#     """
+#     result = model.extract_mesh(
+#         scene_codes,
+#         True,
+#         resolution=resolution
+#     )
     
-    # Check if the result is a tuple (e.g., (meshes, textures))
-    if isinstance(result, tuple):
-        # New API: Unpack the tuple and return the first mesh
-        return result[0][0]
-    else:
-        # Old API: The result is the list of meshes itself
-        return result[0]
+#     # Check if the result is a tuple (e.g., (meshes, textures))
+#     if isinstance(result, tuple):
+#         # New API: Unpack the tuple and return the first mesh
+#         return result[0][0]
+#     else:
+#         # Old API: The result is the list of meshes itself
+#         return result[0]
+
+# def generate(image, mc_resolution, reference_model=None, formats=["obj", "glb"], 
+#              model_quality="Standar", texture_quality=7, smoothing_factor=0.3,
+#              use_model="Both", blend_method="weighted_average", model_weight=0.5):
+#     try:
+#         # Clear CUDA cache before starting
+#         if torch.cuda.is_available():
+#             torch.cuda.empty_cache()
+            
+#         # Create a permanent output directory
+#         output_dir = os.path.join(os.getcwd(), "outputs")
+#         os.makedirs(output_dir, exist_ok=True)
+        
+#         timestamp = time.strftime("%Y%m%d_%H%M%S")
+        
+#         quality_settings = {
+#             "Konsep": {"chunk_size": 32768, "detail_factor": 0.5},
+#             "Standar": {"chunk_size": 16384, "detail_factor": 0.7},
+#             "Tinggi": {"chunk_size": 8192, "detail_factor": 1.0}
+#         }
+        
+#         # Set chunk size for both models
+#         chunk_size = quality_settings[model_quality]["chunk_size"]
+#         model_original.renderer.set_chunk_size(chunk_size)
+#         model_custom.renderer.set_chunk_size(chunk_size)
+        
+#         with torch.inference_mode():
+#             if use_model == "Original Only":
+#                 # Use only original model
+#                 scene_codes = model_original(image, device=device)
+#                 mesh = safe_extract_mesh(model_original, scene_codes, min(mc_resolution, 192))
+                
+#                 # mesh = model_original.extract_mesh(
+#                 #     scene_codes, 
+#                 #     True, 
+#                 #     resolution=min(mc_resolution, 192)
+#                 # )[0]
+                
+#             elif use_model == "Custom Only":
+#                 # Use only custom model
+#                 scene_codes = model_custom(image, device=device)
+#                 mesh = safe_extract_mesh(model_custom, scene_codes, min(mc_resolution, 192))
+#                 # mesh = model_custom.extract_mesh(
+#                 #     scene_codes, 
+#                 #     True, 
+#                 #     resolution=min(mc_resolution, 192)
+#                 # )[0]
+#             else:  # "Both" - Ensemble approach
+#                 scene_codes_original = model_original(image, device=device)
+#                 mesh_original = safe_extract_mesh(model_original, scene_codes_original, min(mc_resolution, 192))
+                
+#                 scene_codes_custom = model_custom(image, device=device)
+#                 mesh_custom = safe_extract_mesh(model_custom, scene_codes_custom, min(mc_resolution, 192))
+#                 weight_original = model_weight
+#                 weight_custom = 1.0 - model_weight
+                
+#                 mesh = ensemble_meshes(
+#                     mesh_original, 
+#                     mesh_custom, 
+#                     blend_method=blend_method,
+#                     weight1=weight_original, 
+#                     weight2=weight_custom
+#                 )    
+                
+#                 # mesh_original = model_original.extract_mesh(
+#                 #     scene_codes_original, 
+#                 #     True, 
+#                 #     resolution=min(mc_resolution, 192)
+#                 # )[0]
+                
+                
+#                 # scene_codes_custom = model_custom(image, device=device)
+#                 # mesh_custom = model_custom.extract_mesh(
+#                 #     scene_codes_custom, 
+#                 #     True, 
+#                 #     resolution=min(mc_resolution, 192)
+#                 # )[0]
+
+                
+#                 # Combine the two meshes
+#                 # weight_original = model_weight
+#                 # weight_custom = 1.0 - model_weight
+                
+#                 # mesh = ensemble_meshes(
+#                 #     mesh_original, 
+#                 #     mesh_custom, 
+#                 #     blend_method=blend_method,
+#                 #     weight1=weight_original, 
+#                 #     weight2=weight_custom
+#                 # )
+        
+#         mesh = to_gradio_3d_orientation(mesh)
+#         mesh = fix_model_orientation(mesh)
+        
+#         # Apply smoothing if requested
+#         if smoothing_factor > 0:
+#             if hasattr(mesh, 'vertices') and len(mesh.vertices) > 0:
+#                 from trimesh import smoothing
+#                 iterations = max(1, int(smoothing_factor * 10))
+#                 smoothing.filter_laplacian(mesh, iterations=iterations)
+        
+#         # Improve texture appearance
+#         if hasattr(mesh, 'visual') and hasattr(mesh.visual, 'vertex_colors'):
+#             colors = mesh.visual.vertex_colors
+#             import colorsys
+#             normalized_colors = np.zeros_like(colors)
+            
+#             for i in range(len(colors)):
+#                 r, g, b = colors[i][0]/255.0, colors[i][1]/255.0, colors[i][2]/255.0
+#                 h, s, v = colorsys.rgb_to_hsv(r, g, b)
+                
+#                 v = min(v, 0.95)
+#                 s = min(s * 1.1, 1.0)
+                
+#                 r, g, b = colorsys.hsv_to_rgb(h, s, v)
+#                 normalized_colors[i][0] = int(r * 255)
+#                 normalized_colors[i][1] = int(g * 255)
+#                 normalized_colors[i][2] = int(b * 255)
+#                 normalized_colors[i][3] = colors[i][3]
+            
+#             mesh.visual.vertex_colors = normalized_colors
+        
+#         # Load reference model if provided
+#         reference_mesh = None
+#         if reference_model is not None:
+#             reference_mesh = trimesh.load(reference_model.name)
+        
+#         # Calculate metrics
+#         metrics = calculate_metrics(mesh, reference_mesh)
+        
+#         # Add current metrics to history
+#         global metrics_history
+#         metrics_history.append(metrics)
+#         if len(metrics_history) > 10:
+#             metrics_history = metrics_history[-10:]
+        
+#         # Create visualization figures
+#         radar_chart = create_metrics_radar_chart(metrics)
+#         bar_chart = create_metrics_bar_chart(metrics)
+        
+#         # Format metrics text
+#         model_info = f"Model used: {use_model}"
+#         if use_model == "Both":
+#             model_info += f" (Original: {model_weight:.1f}, Custom: {1-model_weight:.1f}, Method: {blend_method})"
+        
+#         if reference_mesh is not None:
+#             metrics_text = f"{model_info}\n\nMetrics (compared to reference model):\n"
+#             if 'f1_score' in metrics:
+#                 metrics_text += f"F1 Score: {metrics['f1_score']:.4f}\n"
+#             if 'uniform_hausdorff_distance' in metrics:
+#                 metrics_text += f"Uniform Hausdorff Distance: {metrics['uniform_hausdorff_distance']:.4f}\n"
+#             if 'tangent_space_mean_distance' in metrics:
+#                 metrics_text += f"Tangent-Space Mean Distance: {metrics['tangent_space_mean_distance']:.4f}\n"
+#             if 'chamfer_distance' in metrics:
+#                 metrics_text += f"Chamfer Distance: {metrics['chamfer_distance']:.4f}\n"
+#             if 'iou_score' in metrics:
+#                 metrics_text += f"IoU Score: {metrics['iou_score']:.4f}"
+#             elif 'iou' in metrics:
+#                 metrics_text += f"IoU Score: {metrics['iou']:.4f}"
+#         else:
+#             metrics_text = f"{model_info}\n\nSelf-evaluation metrics:\n"
+#             if 'f1_score' in metrics:
+#                 metrics_text += f"F1 Score: {metrics['f1_score']:.4f}\n"
+#             if 'uniform_hausdorff_distance' in metrics:
+#                 metrics_text += f"Uniform Hausdorff Distance: {metrics['uniform_hausdorff_distance']:.4f}\n"
+#             if 'tangent_space_mean_distance' in metrics:
+#                 metrics_text += f"Tangent-Space Mean Distance: {metrics['tangent_space_mean_distance']:.4f}\n"
+#             if 'chamfer_distance' in metrics:
+#                 metrics_text += f"Chamfer Distance: {metrics['chamfer_distance']:.4f}\n"
+#             if 'iou_score' in metrics:
+#                 metrics_text += f"IoU Score: {metrics['iou_score']:.4f}\n"
+#             elif 'iou' in metrics:
+#                 metrics_text += f"IoU Score: {metrics['iou']:.4f}\n"
+#             metrics_text += f"Note: For more accurate metrics, provide a reference model."
+        
+#         # Save files
+#         rv = []
+#         for format in formats:
+#             file_path = os.path.join(output_dir, f"model_{use_model.replace(' ', '_')}_{timestamp}.{format}")
+#             if format == "glb":
+#                 mesh.export(file_path, file_type="glb")
+#             else:
+#                 mesh.export(
+#                     file_path,
+#                     file_type="obj",
+#                     include_texture=True,
+#                     include_normals=True,
+#                     resolver=None,
+#                     mtl_name=f"model_{use_model.replace(' ', '_')}_{timestamp}.mtl"
+#                 )
+#             rv.append(file_path)
+        
+#         # Add metrics to return values
+#         rv.extend([
+#             metrics.get("f1_score", 0.0),
+#             metrics.get("uniform_hausdorff_distance", 0.0),
+#             metrics.get("tangent_space_mean_distance", 0.0),
+#             metrics.get("chamfer_distance", 0.0),
+#             metrics.get("iou_score", metrics.get("iou", 0.0)),
+#             metrics_text,
+#             radar_chart,
+#             bar_chart
+#         ])
+        
+#         if torch.cuda.is_available():
+#             torch.cuda.empty_cache()
+            
+#         return rv
+#     except RuntimeError as e:
+#         if "CUDA out of memory" in str(e):
+#             if torch.cuda.is_available():
+#                 torch.cuda.empty_cache()
+#             raise gr.Error("GPU memory error. Try 'Konsep' quality or lower resolution.")
+#         else:
+#             raise gr.Error(f"Generation error: {str(e)}")
+#     except Exception as e:
+#         raise gr.Error(f"Error: {str(e)}")
+
+# GANTI TOTAL FUNGSI GENERATE ANDA DENGAN YANG DI BAWAH INI
 
 def generate(image, mc_resolution, reference_model=None, formats=["obj", "glb"], 
              model_quality="Standar", texture_quality=7, smoothing_factor=0.3,
              use_model="Both", blend_method="weighted_average", model_weight=0.5):
     try:
-        # Clear CUDA cache before starting
         if torch.cuda.is_available():
             torch.cuda.empty_cache()
             
-        # Create a permanent output directory
         output_dir = os.path.join(os.getcwd(), "outputs")
         os.makedirs(output_dir, exist_ok=True)
-        
         timestamp = time.strftime("%Y%m%d_%H%M%S")
         
         quality_settings = {
@@ -1063,178 +1279,107 @@ def generate(image, mc_resolution, reference_model=None, formats=["obj", "glb"],
             "Tinggi": {"chunk_size": 8192, "detail_factor": 1.0}
         }
         
-        # Set chunk size for both models
         chunk_size = quality_settings[model_quality]["chunk_size"]
         model_original.renderer.set_chunk_size(chunk_size)
         model_custom.renderer.set_chunk_size(chunk_size)
         
         with torch.inference_mode():
             if use_model == "Original Only":
-                # Use only original model
                 scene_codes = model_original(image, device=device)
-                mesh = safe_extract_mesh(model_original, scene_codes, min(mc_resolution, 192))
-                
-                # mesh = model_original.extract_mesh(
-                #     scene_codes, 
-                #     True, 
-                #     resolution=min(mc_resolution, 192)
-                # )[0]
+                # Paksa return_textures=False agar output konsisten
+                mesh = model_original.extract_mesh(
+                    scene_codes, 
+                    return_textures=False, 
+                    resolution=min(mc_resolution, 192)
+                )[0]
                 
             elif use_model == "Custom Only":
-                # Use only custom model
                 scene_codes = model_custom(image, device=device)
-                mesh = safe_extract_mesh(model_custom, scene_codes, min(mc_resolution, 192))
-                # mesh = model_custom.extract_mesh(
-                #     scene_codes, 
-                #     True, 
-                #     resolution=min(mc_resolution, 192)
-                # )[0]
+                # Paksa return_textures=False agar output konsisten
+                mesh = model_custom.extract_mesh(
+                    scene_codes, 
+                    return_textures=False, 
+                    resolution=min(mc_resolution, 192)
+                )[0]
+
             else:  # "Both" - Ensemble approach
                 scene_codes_original = model_original(image, device=device)
-                mesh_original = safe_extract_mesh(model_original, scene_codes_original, min(mc_resolution, 192))
+                mesh_original = model_original.extract_mesh(
+                    scene_codes_original, 
+                    return_textures=False, # Set ke FALSE
+                    resolution=min(mc_resolution, 192)
+                )[0]
                 
                 scene_codes_custom = model_custom(image, device=device)
-                mesh_custom = safe_extract_mesh(model_custom, scene_codes_custom, min(mc_resolution, 192))
-                weight_original = model_weight
-                weight_custom = 1.0 - model_weight
+                mesh_custom = model_custom.extract_mesh(
+                    scene_codes_custom, 
+                    return_textures=False, # Set ke FALSE
+                    resolution=min(mc_resolution, 192)
+                )[0]
                 
                 mesh = ensemble_meshes(
-                    mesh_original, 
-                    mesh_custom, 
+                    mesh_original, mesh_custom, 
                     blend_method=blend_method,
-                    weight1=weight_original, 
-                    weight2=weight_custom
-                )    
-                
-                # mesh_original = model_original.extract_mesh(
-                #     scene_codes_original, 
-                #     True, 
-                #     resolution=min(mc_resolution, 192)
-                # )[0]
-                
-                
-                # scene_codes_custom = model_custom(image, device=device)
-                # mesh_custom = model_custom.extract_mesh(
-                #     scene_codes_custom, 
-                #     True, 
-                #     resolution=min(mc_resolution, 192)
-                # )[0]
-
-                
-                # Combine the two meshes
-                # weight_original = model_weight
-                # weight_custom = 1.0 - model_weight
-                
-                # mesh = ensemble_meshes(
-                #     mesh_original, 
-                #     mesh_custom, 
-                #     blend_method=blend_method,
-                #     weight1=weight_original, 
-                #     weight2=weight_custom
-                # )
+                    weight1=model_weight, weight2=(1.0 - model_weight)
+                )
         
         mesh = to_gradio_3d_orientation(mesh)
         mesh = fix_model_orientation(mesh)
         
-        # Apply smoothing if requested
         if smoothing_factor > 0:
             if hasattr(mesh, 'vertices') and len(mesh.vertices) > 0:
                 from trimesh import smoothing
                 iterations = max(1, int(smoothing_factor * 10))
                 smoothing.filter_laplacian(mesh, iterations=iterations)
         
-        # Improve texture appearance
         if hasattr(mesh, 'visual') and hasattr(mesh.visual, 'vertex_colors'):
             colors = mesh.visual.vertex_colors
             import colorsys
             normalized_colors = np.zeros_like(colors)
-            
             for i in range(len(colors)):
                 r, g, b = colors[i][0]/255.0, colors[i][1]/255.0, colors[i][2]/255.0
                 h, s, v = colorsys.rgb_to_hsv(r, g, b)
-                
                 v = min(v, 0.95)
                 s = min(s * 1.1, 1.0)
-                
                 r, g, b = colorsys.hsv_to_rgb(h, s, v)
                 normalized_colors[i][0] = int(r * 255)
                 normalized_colors[i][1] = int(g * 255)
                 normalized_colors[i][2] = int(b * 255)
                 normalized_colors[i][3] = colors[i][3]
-            
             mesh.visual.vertex_colors = normalized_colors
-        
-        # Load reference model if provided
+            
         reference_mesh = None
         if reference_model is not None:
             reference_mesh = trimesh.load(reference_model.name)
-        
-        # Calculate metrics
+            
         metrics = calculate_metrics(mesh, reference_mesh)
         
-        # Add current metrics to history
         global metrics_history
         metrics_history.append(metrics)
         if len(metrics_history) > 10:
             metrics_history = metrics_history[-10:]
-        
-        # Create visualization figures
+            
         radar_chart = create_metrics_radar_chart(metrics)
         bar_chart = create_metrics_bar_chart(metrics)
         
-        # Format metrics text
         model_info = f"Model used: {use_model}"
         if use_model == "Both":
             model_info += f" (Original: {model_weight:.1f}, Custom: {1-model_weight:.1f}, Method: {blend_method})"
         
-        if reference_mesh is not None:
-            metrics_text = f"{model_info}\n\nMetrics (compared to reference model):\n"
-            if 'f1_score' in metrics:
-                metrics_text += f"F1 Score: {metrics['f1_score']:.4f}\n"
-            if 'uniform_hausdorff_distance' in metrics:
-                metrics_text += f"Uniform Hausdorff Distance: {metrics['uniform_hausdorff_distance']:.4f}\n"
-            if 'tangent_space_mean_distance' in metrics:
-                metrics_text += f"Tangent-Space Mean Distance: {metrics['tangent_space_mean_distance']:.4f}\n"
-            if 'chamfer_distance' in metrics:
-                metrics_text += f"Chamfer Distance: {metrics['chamfer_distance']:.4f}\n"
-            if 'iou_score' in metrics:
-                metrics_text += f"IoU Score: {metrics['iou_score']:.4f}"
-            elif 'iou' in metrics:
-                metrics_text += f"IoU Score: {metrics['iou']:.4f}"
-        else:
-            metrics_text = f"{model_info}\n\nSelf-evaluation metrics:\n"
-            if 'f1_score' in metrics:
-                metrics_text += f"F1 Score: {metrics['f1_score']:.4f}\n"
-            if 'uniform_hausdorff_distance' in metrics:
-                metrics_text += f"Uniform Hausdorff Distance: {metrics['uniform_hausdorff_distance']:.4f}\n"
-            if 'tangent_space_mean_distance' in metrics:
-                metrics_text += f"Tangent-Space Mean Distance: {metrics['tangent_space_mean_distance']:.4f}\n"
-            if 'chamfer_distance' in metrics:
-                metrics_text += f"Chamfer Distance: {metrics['chamfer_distance']:.4f}\n"
-            if 'iou_score' in metrics:
-                metrics_text += f"IoU Score: {metrics['iou_score']:.4f}\n"
-            elif 'iou' in metrics:
-                metrics_text += f"IoU Score: {metrics['iou']:.4f}\n"
-            metrics_text += f"Note: For more accurate metrics, provide a reference model."
+        metrics_text = f"{model_info}\n\nMetrics:\n"
+        if 'f1_score' in metrics: metrics_text += f"F1 Score: {metrics['f1_score']:.4f}\n"
+        if 'uniform_hausdorff_distance' in metrics: metrics_text += f"UHD: {metrics['uniform_hausdorff_distance']:.4f}\n"
+        if 'tangent_space_mean_distance' in metrics: metrics_text += f"TMD: {metrics['tangent_space_mean_distance']:.4f}\n"
+        if 'chamfer_distance' in metrics: metrics_text += f"CD: {metrics['chamfer_distance']:.4f}\n"
+        if 'iou_score' in metrics: metrics_text += f"IoU Score: {metrics.get('iou_score', metrics.get('iou', 0.0)):.4f}"
+        if reference_mesh is None: metrics_text += "\nNote: For more accurate metrics, provide a reference model."
         
-        # Save files
         rv = []
         for format in formats:
             file_path = os.path.join(output_dir, f"model_{use_model.replace(' ', '_')}_{timestamp}.{format}")
-            if format == "glb":
-                mesh.export(file_path, file_type="glb")
-            else:
-                mesh.export(
-                    file_path,
-                    file_type="obj",
-                    include_texture=True,
-                    include_normals=True,
-                    resolver=None,
-                    mtl_name=f"model_{use_model.replace(' ', '_')}_{timestamp}.mtl"
-                )
+            mesh.export(file_path)
             rv.append(file_path)
         
-        # Add metrics to return values
         rv.extend([
             metrics.get("f1_score", 0.0),
             metrics.get("uniform_hausdorff_distance", 0.0),
