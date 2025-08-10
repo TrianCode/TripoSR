@@ -1023,6 +1023,25 @@ def fix_model_orientation(mesh):
             mesh.visual.material.shininess = 0.1
 
     return mesh
+    
+def safe_extract_mesh(model, scene_codes, resolution):
+    """
+    Safely extracts the first mesh from the model output,
+    handling both old (list) and new (tuple) API formats.
+    """
+    result = model.extract_mesh(
+        scene_codes,
+        True,
+        resolution=resolution
+    )
+    
+    # Check if the result is a tuple (e.g., (meshes, textures))
+    if isinstance(result, tuple):
+        # New API: Unpack the tuple and return the first mesh
+        return result[0][0]
+    else:
+        # Old API: The result is the list of meshes itself
+        return result[0]
 
 def generate(image, mc_resolution, reference_model=None, formats=["obj", "glb"], 
              model_quality="Standar", texture_quality=7, smoothing_factor=0.3,
@@ -1053,12 +1072,8 @@ def generate(image, mc_resolution, reference_model=None, formats=["obj", "glb"],
             if use_model == "Original Only":
                 # Use only original model
                 scene_codes = model_original(image, device=device)
-                meshes, _ = model_original.extract_mesh(
-                    scene_codes, 
-                    True, 
-                    resolution=min(mc_resolution, 192)
-                )
-                mesh = meshes[0]
+                mesh = safe_extract_mesh(model_original, scene_codes, min(mc_resolution, 192))
+                
                 # mesh = model_original.extract_mesh(
                 #     scene_codes, 
                 #     True, 
@@ -1068,12 +1083,7 @@ def generate(image, mc_resolution, reference_model=None, formats=["obj", "glb"],
             elif use_model == "Custom Only":
                 # Use only custom model
                 scene_codes = model_custom(image, device=device)
-                meshes, _ = model_custom.extract_mesh(
-                    scene_codes, 
-                    True, 
-                    resolution=min(mc_resolution, 192)
-                )
-                mesh = meshes[0]
+                mesh = safe_extract_mesh(model_custom, scene_codes, min(mc_resolution, 192))
                 # mesh = model_custom.extract_mesh(
                 #     scene_codes, 
                 #     True, 
@@ -1084,19 +1094,8 @@ def generate(image, mc_resolution, reference_model=None, formats=["obj", "glb"],
                 # Generate with both models
                 scene_codes_original = model_original(image, device=device)
                 # Kode baru yang benar
-                meshes_original, _ = model_original.extract_mesh(
-                    scene_codes_original, 
-                    True, 
-                    resolution=min(mc_resolution, 192)
-                )
-                mesh_original = meshes_original[0]
-                
-                meshes_custom, _ = model_custom.extract_mesh(
-                    scene_codes_custom, 
-                    True, 
-                    resolution=min(mc_resolution, 192)
-                )
-                mesh_custom = meshes_custom[0]
+                mesh_original = safe_extract_mesh(model_original, scene_codes_original, min(mc_resolution, 192))
+                mesh_custom = safe_extract_mesh(model_custom, scene_codes_custom, min(mc_resolution, 192))
                 
                 # mesh_original = model_original.extract_mesh(
                 #     scene_codes_original, 
