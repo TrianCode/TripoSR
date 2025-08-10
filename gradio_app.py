@@ -1430,19 +1430,48 @@ Unggah gambar untuk menghasilkan model 3D menggunakan model original TripoSR, mo
         )
     
     # Event handlers
-    submit.click(fn=check_input_image, inputs=[input_image]).success(
-        fn=preprocess,
-        inputs=[input_image, do_remove_background, foreground_ratio],
-        outputs=[processed_image],
-    ).success(
-        fn=lambda img, rb, fr, mc, rm, mq, tq, sf, um, bm, mw: 
-            generate(
-                preprocess(img, rb, fr),
-                mc, rm, ["obj", "glb"], mq, tq, sf, um, bm, mw
-            ),
+    # submit.click(fn=check_input_image, inputs=[input_image]).success(
+    #     fn=preprocess,
+    #     inputs=[input_image, do_remove_background, foreground_ratio],
+    #     outputs=[processed_image],
+    # ).success(
+    #     fn=lambda img, rb, fr, mc, rm, mq, tq, sf, um, bm, mw: 
+    #         generate(
+    #             preprocess(img, rb, fr),
+    #             mc, rm, ["obj", "glb"], mq, tq, sf, um, bm, mw
+    #         ),
+    #     inputs=[
+    #         input_image, 
+    #         do_remove_background, 
+    #         foreground_ratio,
+    #         mc_resolution,
+    #         reference_model,
+    #         model_quality,
+    #         texture_quality,
+    #         smoothing_factor,
+    #         use_model,
+    #         blend_method,
+    #         model_weight
+    #     ],
+    #     outputs=[
+    #         output_model_obj, 
+    #         output_model_glb,
+    #         f1_metric,
+    #         uhd_metric,
+    #         tmd_metric,
+    #         cd_metric,
+    #         iou_metric,
+    #         metrics_text,
+    #         radar_plot,
+    #         bar_plot
+    #     ]
+    # )
+    
+    submit.click(
+        fn=run_generation_pipeline,
         inputs=[
-            input_image, 
-            do_remove_background, 
+            input_image,
+            do_remove_background,
             foreground_ratio,
             mc_resolution,
             reference_model,
@@ -1454,16 +1483,17 @@ Unggah gambar untuk menghasilkan model 3D menggunakan model original TripoSR, mo
             model_weight
         ],
         outputs=[
-            output_model_obj, 
-            output_model_glb,
-            f1_metric,
-            uhd_metric,
-            tmd_metric,
-            cd_metric,
-            iou_metric,
-            metrics_text,
-            radar_plot,
-            bar_plot
+            processed_image,      # 1. Output for the processed image display
+            output_model_obj,     # 2.
+            output_model_glb,     # 3.
+            f1_metric,            # 4.
+            uhd_metric,           # 5.
+            tmd_metric,           # 6.
+            cd_metric,            # 7.
+            iou_metric,           # 8.
+            metrics_text,         # 9.
+            radar_plot,           # 10.
+            bar_plot              # 11.
         ]
     )
     
@@ -1485,6 +1515,41 @@ Unggah gambar untuk menghasilkan model 3D menggunakan model original TripoSR, mo
         inputs=[use_model],
         outputs=[model_weight, blend_method]
     )
+
+    def run_generation_pipeline(
+        input_image, do_remove_background, foreground_ratio, 
+        mc_resolution, reference_model, model_quality, 
+        texture_quality, smoothing_factor, use_model, 
+        blend_method, model_weight
+    ):
+        """
+        A single function to handle the complete generation process from a Gradio button click.
+        """
+        # 1. Input Validation (raises gr.Error on failure, stopping execution)
+        check_input_image(input_image)
+    
+        # 2. Preprocess the image once
+        processed_image = preprocess(input_image, do_remove_background, foreground_ratio)
+    
+        # 3. Generate the 3D model and metrics. 
+        # The 'generate' function returns a list of 10 items.
+        generation_results = generate(
+            processed_image,
+            mc_resolution,
+            reference_model,
+            ["obj", "glb"],  # Explicitly define formats
+            model_quality,
+            texture_quality,
+            smoothing_factor,
+            use_model,
+            blend_method,
+            model_weight
+        )
+    
+        # 4. Return all outputs in a single list.
+        # The first item is the processed image, followed by the 10 items from generate.
+        # This creates a final list of 11 items that matches the UI outputs.
+        return [processed_image] + generation_results
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
