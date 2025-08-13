@@ -1308,7 +1308,7 @@ def fix_model_orientation(mesh):
 
 # GANTI TOTAL FUNGSI GENERATE ANDA DENGAN YANG DI BAWAH INI
 
-def generate(image, mc_resolution, reference_model=None, formats=["obj", "glb"], 
+def generate(image, mc_resolution, reference_model=None, formats=["obj", "glb", "ply"], 
              model_quality="Standar", texture_quality=7, smoothing_factor=0.3,
              use_model="Both", blend_method="weighted_average", model_weight=0.5):
     try:
@@ -1413,7 +1413,10 @@ def generate(image, mc_resolution, reference_model=None, formats=["obj", "glb"],
             model_info += f" (Original: {model_weight:.1f}, Custom: {1-model_weight:.1f}, Method: {blend_method})"
         
         metrics_text = f"{model_info}\n\nMetrics:\n"
-        if 'f1_score' in metrics: metrics_text += f"F1 Score: {metrics['f1_score']:.4f}\n"
+        if 'f1_score' in metrics:
+            f1_error = 1.0 - metrics['f1_score']
+            metrics_text += f"F1 Score: {f1_error:.4f}\n"
+        # if 'f1_score' in metrics: metrics_text += f"F1 Score: {metrics['f1_score']:.4f}\n"
         if 'uniform_hausdorff_distance' in metrics: metrics_text += f"UHD: {metrics['uniform_hausdorff_distance']:.4f}\n"
         if 'tangent_space_mean_distance' in metrics: metrics_text += f"TMD: {metrics['tangent_space_mean_distance']:.4f}\n"
         if 'chamfer_distance' in metrics: metrics_text += f"CD: {metrics['chamfer_distance']:.4f}\n"
@@ -1423,11 +1426,18 @@ def generate(image, mc_resolution, reference_model=None, formats=["obj", "glb"],
         rv = []
         for format in formats:
             file_path = os.path.join(output_dir, f"model_{use_model.replace(' ', '_')}_{timestamp}.{format}")
-            mesh.export(file_path)
+            if format == "ply":
+                point_cloud.export(file_path) # Ekspor point cloud
+            else:
+                mesh.export(file_path) # Ekspor mesh seperti biasa
             rv.append(file_path)
+        # for format in formats:
+        #     file_path = os.path.join(output_dir, f"model_{use_model.replace(' ', '_')}_{timestamp}.{format}")
+        #     mesh.export(file_path)
+        #     rv.append(file_path)
         
         rv.extend([
-            metrics.get("f1_score", 0.0),
+            (1.0 - metrics.get("f1_score", 0.0)),
             metrics.get("uniform_hausdorff_distance", 0.0),
             metrics.get("tangent_space_mean_distance", 0.0),
             metrics.get("chamfer_distance", 0.0),
