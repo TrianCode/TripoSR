@@ -1422,15 +1422,33 @@ def generate(image, mc_resolution, reference_model=None, formats=["obj", "glb", 
         if 'chamfer_distance' in metrics: metrics_text += f"CD: {metrics['chamfer_distance']:.4f}\n"
         if 'iou_score' in metrics: metrics_text += f"IoU Score: {metrics.get('iou_score', metrics.get('iou', 0.0)):.4f}"
         if reference_mesh is None: metrics_text += "\nNote: For more accurate metrics, provide a reference model."
-        
+
+        # Kode Baru yang Benar
+
+    # Buat objek point cloud dari vertices dan warnanya
+        vertex_colors = None
+        if hasattr(mesh, 'visual') and hasattr(mesh.visual, 'vertex_colors'):
+            vertex_colors = mesh.visual.vertex_colors
+            point_cloud = trimesh.points.PointCloud(mesh.vertices, colors=vertex_colors)
+
+    # Simpan file-file
         rv = []
         for format in formats:
             file_path = os.path.join(output_dir, f"model_{use_model.replace(' ', '_')}_{timestamp}.{format}")
             if format == "ply":
-                point_cloud.export(file_path) # Ekspor point cloud
+                point_cloud.export(file_path) # Sekarang 'point_cloud' sudah ada
             else:
-                mesh.export(file_path) # Ekspor mesh seperti biasa
+                mesh.export(file_path)
             rv.append(file_path)
+        
+        # rv = []
+        # for format in formats:
+        #     file_path = os.path.join(output_dir, f"model_{use_model.replace(' ', '_')}_{timestamp}.{format}")
+        #     if format == "ply":
+        #         point_cloud.export(file_path) # Ekspor point cloud
+        #     else:
+        #         mesh.export(file_path) # Ekspor mesh seperti biasa
+        #     rv.append(file_path)
         # for format in formats:
         #     file_path = os.path.join(output_dir, f"model_{use_model.replace(' ', '_')}_{timestamp}.{format}")
         #     mesh.export(file_path)
