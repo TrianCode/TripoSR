@@ -776,33 +776,6 @@ def ensemble_meshes(mesh1, mesh2, blend_method="weighted_average", weight1=0.5, 
     
     return combined_mesh
 
-# def spatial_blend_meshes(mesh1, mesh2, weight1, weight2):
-#     """
-#     Blend meshes by creating a new mesh that combines spatial information
-#     """
-#     # Sample points from both meshes
-#     n_samples = 10000
-#     points1, _ = mesh1.sample(n_samples)
-#     points2, _ = mesh2.sample(n_samples)
-    
-#     # Combine sampled points with weights
-#     combined_points = np.concatenate([
-#         points1 * weight1,
-#         points2 * weight2
-#     ])
-    
-#     # Create a new mesh using marching cubes or convex hull
-#     try:
-#         # Use convex hull as a simple approach
-#         combined_mesh = trimesh.convex.convex_hull(combined_points)
-#     except:
-#         # Fallback: use alpha shape or return first mesh
-#         combined_mesh = mesh1
-    
-#     return combined_mesh
-
-# GANTI TOTAL FUNGSI SPATIAL_BLEND_MESHES ANDA DENGAN YANG DI BAWAH INI
-
 def spatial_blend_meshes(mesh1, mesh2, weight1, weight2):
     """
     Blend meshes by creating a new mesh that combines spatial information.
@@ -1065,248 +1038,8 @@ def fix_model_orientation(mesh):
             mesh.visual.material.shininess = 0.1
 
     return mesh
-    
-# def safe_extract_mesh(model, scene_codes, resolution):
-#     """
-#     Safely extracts the first mesh from the model output,
-#     handling both old (list) and new (tuple) API formats.
-#     """
-#     result = model.extract_mesh(
-#         scene_codes,
-#         True,
-#         resolution=resolution
-#     )
-    
-#     # Check if the result is a tuple (e.g., (meshes, textures))
-#     if isinstance(result, tuple):
-#         # New API: Unpack the tuple and return the first mesh
-#         return result[0][0]
-#     else:
-#         # Old API: The result is the list of meshes itself
-#         return result[0]
 
-# def generate(image, mc_resolution, reference_model=None, formats=["obj", "glb"], 
-#              model_quality="Standar", texture_quality=7, smoothing_factor=0.3,
-#              use_model="Both", blend_method="weighted_average", model_weight=0.5):
-#     try:
-#         # Clear CUDA cache before starting
-#         if torch.cuda.is_available():
-#             torch.cuda.empty_cache()
-            
-#         # Create a permanent output directory
-#         output_dir = os.path.join(os.getcwd(), "outputs")
-#         os.makedirs(output_dir, exist_ok=True)
-        
-#         timestamp = time.strftime("%Y%m%d_%H%M%S")
-        
-#         quality_settings = {
-#             "Konsep": {"chunk_size": 32768, "detail_factor": 0.5},
-#             "Standar": {"chunk_size": 16384, "detail_factor": 0.7},
-#             "Tinggi": {"chunk_size": 8192, "detail_factor": 1.0}
-#         }
-        
-#         # Set chunk size for both models
-#         chunk_size = quality_settings[model_quality]["chunk_size"]
-#         model_original.renderer.set_chunk_size(chunk_size)
-#         model_custom.renderer.set_chunk_size(chunk_size)
-        
-#         with torch.inference_mode():
-#             if use_model == "Original Only":
-#                 # Use only original model
-#                 scene_codes = model_original(image, device=device)
-#                 mesh = safe_extract_mesh(model_original, scene_codes, min(mc_resolution, 192))
-                
-#                 # mesh = model_original.extract_mesh(
-#                 #     scene_codes, 
-#                 #     True, 
-#                 #     resolution=min(mc_resolution, 192)
-#                 # )[0]
-                
-#             elif use_model == "Custom Only":
-#                 # Use only custom model
-#                 scene_codes = model_custom(image, device=device)
-#                 mesh = safe_extract_mesh(model_custom, scene_codes, min(mc_resolution, 192))
-#                 # mesh = model_custom.extract_mesh(
-#                 #     scene_codes, 
-#                 #     True, 
-#                 #     resolution=min(mc_resolution, 192)
-#                 # )[0]
-#             else:  # "Both" - Ensemble approach
-#                 scene_codes_original = model_original(image, device=device)
-#                 mesh_original = safe_extract_mesh(model_original, scene_codes_original, min(mc_resolution, 192))
-                
-#                 scene_codes_custom = model_custom(image, device=device)
-#                 mesh_custom = safe_extract_mesh(model_custom, scene_codes_custom, min(mc_resolution, 192))
-#                 weight_original = model_weight
-#                 weight_custom = 1.0 - model_weight
-                
-#                 mesh = ensemble_meshes(
-#                     mesh_original, 
-#                     mesh_custom, 
-#                     blend_method=blend_method,
-#                     weight1=weight_original, 
-#                     weight2=weight_custom
-#                 )    
-                
-#                 # mesh_original = model_original.extract_mesh(
-#                 #     scene_codes_original, 
-#                 #     True, 
-#                 #     resolution=min(mc_resolution, 192)
-#                 # )[0]
-                
-                
-#                 # scene_codes_custom = model_custom(image, device=device)
-#                 # mesh_custom = model_custom.extract_mesh(
-#                 #     scene_codes_custom, 
-#                 #     True, 
-#                 #     resolution=min(mc_resolution, 192)
-#                 # )[0]
-
-                
-#                 # Combine the two meshes
-#                 # weight_original = model_weight
-#                 # weight_custom = 1.0 - model_weight
-                
-#                 # mesh = ensemble_meshes(
-#                 #     mesh_original, 
-#                 #     mesh_custom, 
-#                 #     blend_method=blend_method,
-#                 #     weight1=weight_original, 
-#                 #     weight2=weight_custom
-#                 # )
-        
-#         mesh = to_gradio_3d_orientation(mesh)
-#         mesh = fix_model_orientation(mesh)
-        
-#         # Apply smoothing if requested
-#         if smoothing_factor > 0:
-#             if hasattr(mesh, 'vertices') and len(mesh.vertices) > 0:
-#                 from trimesh import smoothing
-#                 iterations = max(1, int(smoothing_factor * 10))
-#                 smoothing.filter_laplacian(mesh, iterations=iterations)
-        
-#         # Improve texture appearance
-#         if hasattr(mesh, 'visual') and hasattr(mesh.visual, 'vertex_colors'):
-#             colors = mesh.visual.vertex_colors
-#             import colorsys
-#             normalized_colors = np.zeros_like(colors)
-            
-#             for i in range(len(colors)):
-#                 r, g, b = colors[i][0]/255.0, colors[i][1]/255.0, colors[i][2]/255.0
-#                 h, s, v = colorsys.rgb_to_hsv(r, g, b)
-                
-#                 v = min(v, 0.95)
-#                 s = min(s * 1.1, 1.0)
-                
-#                 r, g, b = colorsys.hsv_to_rgb(h, s, v)
-#                 normalized_colors[i][0] = int(r * 255)
-#                 normalized_colors[i][1] = int(g * 255)
-#                 normalized_colors[i][2] = int(b * 255)
-#                 normalized_colors[i][3] = colors[i][3]
-            
-#             mesh.visual.vertex_colors = normalized_colors
-        
-#         # Load reference model if provided
-#         reference_mesh = None
-#         if reference_model is not None:
-#             reference_mesh = trimesh.load(reference_model.name)
-        
-#         # Calculate metrics
-#         metrics = calculate_metrics(mesh, reference_mesh)
-        
-#         # Add current metrics to history
-#         global metrics_history
-#         metrics_history.append(metrics)
-#         if len(metrics_history) > 10:
-#             metrics_history = metrics_history[-10:]
-        
-#         # Create visualization figures
-#         radar_chart = create_metrics_radar_chart(metrics)
-#         bar_chart = create_metrics_bar_chart(metrics)
-        
-#         # Format metrics text
-#         model_info = f"Model used: {use_model}"
-#         if use_model == "Both":
-#             model_info += f" (Original: {model_weight:.1f}, Custom: {1-model_weight:.1f}, Method: {blend_method})"
-        
-#         if reference_mesh is not None:
-#             metrics_text = f"{model_info}\n\nMetrics (compared to reference model):\n"
-#             if 'f1_score' in metrics:
-#                 metrics_text += f"F1 Score: {metrics['f1_score']:.4f}\n"
-#             if 'uniform_hausdorff_distance' in metrics:
-#                 metrics_text += f"Uniform Hausdorff Distance: {metrics['uniform_hausdorff_distance']:.4f}\n"
-#             if 'tangent_space_mean_distance' in metrics:
-#                 metrics_text += f"Tangent-Space Mean Distance: {metrics['tangent_space_mean_distance']:.4f}\n"
-#             if 'chamfer_distance' in metrics:
-#                 metrics_text += f"Chamfer Distance: {metrics['chamfer_distance']:.4f}\n"
-#             if 'iou_score' in metrics:
-#                 metrics_text += f"IoU Score: {metrics['iou_score']:.4f}"
-#             elif 'iou' in metrics:
-#                 metrics_text += f"IoU Score: {metrics['iou']:.4f}"
-#         else:
-#             metrics_text = f"{model_info}\n\nSelf-evaluation metrics:\n"
-#             if 'f1_score' in metrics:
-#                 metrics_text += f"F1 Score: {metrics['f1_score']:.4f}\n"
-#             if 'uniform_hausdorff_distance' in metrics:
-#                 metrics_text += f"Uniform Hausdorff Distance: {metrics['uniform_hausdorff_distance']:.4f}\n"
-#             if 'tangent_space_mean_distance' in metrics:
-#                 metrics_text += f"Tangent-Space Mean Distance: {metrics['tangent_space_mean_distance']:.4f}\n"
-#             if 'chamfer_distance' in metrics:
-#                 metrics_text += f"Chamfer Distance: {metrics['chamfer_distance']:.4f}\n"
-#             if 'iou_score' in metrics:
-#                 metrics_text += f"IoU Score: {metrics['iou_score']:.4f}\n"
-#             elif 'iou' in metrics:
-#                 metrics_text += f"IoU Score: {metrics['iou']:.4f}\n"
-#             metrics_text += f"Note: For more accurate metrics, provide a reference model."
-        
-#         # Save files
-#         rv = []
-#         for format in formats:
-#             file_path = os.path.join(output_dir, f"model_{use_model.replace(' ', '_')}_{timestamp}.{format}")
-#             if format == "glb":
-#                 mesh.export(file_path, file_type="glb")
-#             else:
-#                 mesh.export(
-#                     file_path,
-#                     file_type="obj",
-#                     include_texture=True,
-#                     include_normals=True,
-#                     resolver=None,
-#                     mtl_name=f"model_{use_model.replace(' ', '_')}_{timestamp}.mtl"
-#                 )
-#             rv.append(file_path)
-        
-#         # Add metrics to return values
-        # rv.extend([
-        #     metrics.get("f1_score", 0.0),
-        #     metrics.get("uniform_hausdorff_distance", 0.0),
-        #     metrics.get("tangent_space_mean_distance", 0.0),
-        #     metrics.get("chamfer_distance", 0.0),
-        #     metrics.get("iou_score", metrics.get("iou", 0.0)),
-        #     metrics_text,
-        #     radar_chart,
-        #     bar_chart
-        # ])
-# Kode Baru yang Benar
-        
-
-        
-#         if torch.cuda.is_available():
-#             torch.cuda.empty_cache()
-            
-#         return rv
-#     except RuntimeError as e:
-#         if "CUDA out of memory" in str(e):
-#             if torch.cuda.is_available():
-#                 torch.cuda.empty_cache()
-#             raise gr.Error("GPU memory error. Try 'Konsep' quality or lower resolution.")
-#         else:
-#             raise gr.Error(f"Generation error: {str(e)}")
-#     except Exception as e:
-#         raise gr.Error(f"Error: {str(e)}")
-
-
-# GANTI TOTAL FUNGSI GENERATE ANDA DENGAN YANG DI BAWAH INI
+# GANTI TOTAL FUNGSI GENERATE ANDA DENGAN VERSI FINAL DI BAWAH INI
 
 def generate(image, mc_resolution, reference_model=None, formats=["obj", "glb", "ply"], 
              model_quality="Standar", texture_quality=7, smoothing_factor=0.3,
@@ -1330,9 +1063,9 @@ def generate(image, mc_resolution, reference_model=None, formats=["obj", "glb", 
         model_custom.renderer.set_chunk_size(chunk_size)
         
         with torch.inference_mode():
+            # FIX #1: Memanggil extract_mesh sesuai versi library Anda
             if use_model == "Original Only":
                 scene_codes = model_original(image, device=device)
-                # Tambahkan argumen 'has_vertex_color' yang dibutuhkan
                 mesh = model_original.extract_mesh(
                     scene_codes, 
                     True, # Ini untuk has_vertex_color
@@ -1341,14 +1074,13 @@ def generate(image, mc_resolution, reference_model=None, formats=["obj", "glb", 
                 
             elif use_model == "Custom Only":
                 scene_codes = model_custom(image, device=device)
-                # Tambahkan argumen 'has_vertex_color' yang dibutuhkan
                 mesh = model_custom.extract_mesh(
                     scene_codes, 
                     True, # Ini untuk has_vertex_color
                     resolution=min(mc_resolution, 192)
                 )[0]
 
-            else:  # "Both" - Ensemble approach
+            else:
                 scene_codes_original = model_original(image, device=device)
                 mesh_original = model_original.extract_mesh(
                     scene_codes_original, 
@@ -1414,52 +1146,36 @@ def generate(image, mc_resolution, reference_model=None, formats=["obj", "glb", 
         
         metrics_text = f"{model_info}\n\nMetrics:\n"
         if 'f1_score' in metrics:
-            f1_error = 1.0 - metrics['f1_score']
-            metrics_text += f"F1 Score: {f1_error:.4f}\n"
-        # if 'f1_score' in metrics: metrics_text += f"F1 Score: {metrics['f1_score']:.4f}\n"
+            f1_error = 1.0 - float(metrics['f1_score'])
+            metrics_text += f"F1 Error (1-F1): {f1_error:.4f}\n"
         if 'uniform_hausdorff_distance' in metrics: metrics_text += f"UHD: {metrics['uniform_hausdorff_distance']:.4f}\n"
         if 'tangent_space_mean_distance' in metrics: metrics_text += f"TMD: {metrics['tangent_space_mean_distance']:.4f}\n"
         if 'chamfer_distance' in metrics: metrics_text += f"CD: {metrics['chamfer_distance']:.4f}\n"
         if 'iou_score' in metrics: metrics_text += f"IoU Score: {metrics.get('iou_score', metrics.get('iou', 0.0)):.4f}"
         if reference_mesh is None: metrics_text += "\nNote: For more accurate metrics, provide a reference model."
-
-        # Kode Baru yang Benar
-
-    # Buat objek point cloud dari vertices dan warnanya
+        
+        # FIX #2: Membuat point_cloud SEBELUM loop penyimpanan
         vertex_colors = None
         if hasattr(mesh, 'visual') and hasattr(mesh.visual, 'vertex_colors'):
             vertex_colors = mesh.visual.vertex_colors
-            point_cloud = trimesh.points.PointCloud(mesh.vertices, colors=vertex_colors)
-
-    # Simpan file-file
+        point_cloud = trimesh.points.PointCloud(mesh.vertices, colors=vertex_colors)
+        
         rv = []
         for format in formats:
             file_path = os.path.join(output_dir, f"model_{use_model.replace(' ', '_')}_{timestamp}.{format}")
             if format == "ply":
-                point_cloud.export(file_path) # Sekarang 'point_cloud' sudah ada
+                point_cloud.export(file_path)
             else:
                 mesh.export(file_path)
             rv.append(file_path)
         
-        # rv = []
-        # for format in formats:
-        #     file_path = os.path.join(output_dir, f"model_{use_model.replace(' ', '_')}_{timestamp}.{format}")
-        #     if format == "ply":
-        #         point_cloud.export(file_path) # Ekspor point cloud
-        #     else:
-        #         mesh.export(file_path) # Ekspor mesh seperti biasa
-        #     rv.append(file_path)
-        # for format in formats:
-        #     file_path = os.path.join(output_dir, f"model_{use_model.replace(' ', '_')}_{timestamp}.{format}")
-        #     mesh.export(file_path)
-        #     rv.append(file_path)
-        
+        # FIX #3: Membungkus semua metrik dengan float() untuk mencegah TypeError
         rv.extend([
-            (1.0 - metrics.get("f1_score", 0.0)),
-            metrics.get("uniform_hausdorff_distance", 0.0),
-            metrics.get("tangent_space_mean_distance", 0.0),
-            metrics.get("chamfer_distance", 0.0),
-            metrics.get("iou_score", metrics.get("iou", 0.0)),
+            (1.0 - float(metrics.get("f1_score", 0.0))),
+            float(metrics.get("uniform_hausdorff_distance", 0.0)),
+            float(metrics.get("tangent_space_mean_distance", 0.0)),
+            float(metrics.get("chamfer_distance", 0.0)),
+            float(metrics.get("iou_score", metrics.get("iou", 0.0))),
             metrics_text,
             radar_chart,
             bar_chart
@@ -1478,154 +1194,6 @@ def generate(image, mc_resolution, reference_model=None, formats=["obj", "glb", 
             raise gr.Error(f"Generation error: {str(e)}")
     except Exception as e:
         raise gr.Error(f"Error: {str(e)}")
-# def generate(image, mc_resolution, reference_model=None, formats=["obj", "glb", "ply"], 
-#              model_quality="Standar", texture_quality=7, smoothing_factor=0.3,
-#              use_model="Both", blend_method="weighted_average", model_weight=0.5):
-#     try:
-#         if torch.cuda.is_available():
-#             torch.cuda.empty_cache()
-            
-#         output_dir = os.path.join(os.getcwd(), "outputs")
-#         os.makedirs(output_dir, exist_ok=True)
-#         timestamp = time.strftime("%Y%m%d_%H%M%S")
-        
-#         quality_settings = {
-#             "Konsep": {"chunk_size": 32768, "detail_factor": 0.5},
-#             "Standar": {"chunk_size": 16384, "detail_factor": 0.7},
-#             "Tinggi": {"chunk_size": 8192, "detail_factor": 1.0}
-#         }
-        
-#         chunk_size = quality_settings[model_quality]["chunk_size"]
-#         model_original.renderer.set_chunk_size(chunk_size)
-#         model_custom.renderer.set_chunk_size(chunk_size)
-        
-#         with torch.inference_mode():
-#             if use_model == "Original Only":
-#                 scene_codes = model_original(image, device=device)
-#                 mesh = model_original.extract_mesh(
-#                     scene_codes, 
-#                     True,
-#                     resolution=min(mc_resolution, 192)
-#                 )[0]
-                
-#             elif use_model == "Custom Only":
-#                 scene_codes = model_custom(image, device=device)
-#                 mesh = model_custom.extract_mesh(
-#                     scene_codes, 
-#                     True,
-#                     resolution=min(mc_resolution, 192)
-#                 )[0]
-
-#             else:
-#                 scene_codes_original = model_original(image, device=device)
-#                 mesh_original = model_original.extract_mesh(
-#                     scene_codes_original, 
-#                     True,
-#                     resolution=min(mc_resolution, 192)
-#                 )[0]
-                
-#                 scene_codes_custom = model_custom(image, device=device)
-#                 mesh_custom = model_custom.extract_mesh(
-#                     scene_codes_custom, 
-#                     True,
-#                     resolution=min(mc_resolution, 192)
-#                 )[0]
-                
-#                 mesh = ensemble_meshes(
-#                     mesh_original, mesh_custom, 
-#                     blend_method=blend_method,
-#                     weight1=model_weight, weight2=(1.0 - model_weight)
-#                 )
-        
-#         mesh = to_gradio_3d_orientation(mesh)
-#         mesh = fix_model_orientation(mesh)
-        
-#         if smoothing_factor > 0:
-#             if hasattr(mesh, 'vertices') and len(mesh.vertices) > 0:
-#                 from trimesh import smoothing
-#                 iterations = max(1, int(smoothing_factor * 10))
-#                 smoothing.filter_laplacian(mesh, iterations=iterations)
-        
-#         if hasattr(mesh, 'visual') and hasattr(mesh.visual, 'vertex_colors'):
-#             colors = mesh.visual.vertex_colors
-#             import colorsys
-#             normalized_colors = np.zeros_like(colors)
-#             for i in range(len(colors)):
-#                 r, g, b = colors[i][0]/255.0, colors[i][1]/255.0, colors[i][2]/255.0
-#                 h, s, v = colorsys.rgb_to_hsv(r, g, b)
-#                 v = min(v, 0.95)
-#                 s = min(s * 1.1, 1.0)
-#                 r, g, b = colorsys.hsv_to_rgb(h, s, v)
-#                 normalized_colors[i][0] = int(r * 255)
-#                 normalized_colors[i][1] = int(g * 255)
-#                 normalized_colors[i][2] = int(b * 255)
-#                 normalized_colors[i][3] = colors[i][3]
-#             mesh.visual.vertex_colors = normalized_colors
-            
-#         reference_mesh = None
-#         if reference_model is not None:
-#             reference_mesh = trimesh.load(reference_model.name)
-            
-#         metrics = calculate_metrics(mesh, reference_mesh)
-        
-#         global metrics_history
-#         metrics_history.append(metrics)
-#         if len(metrics_history) > 10:
-#             metrics_history = metrics_history[-10:]
-            
-#         radar_chart = create_metrics_radar_chart(metrics)
-#         bar_chart = create_metrics_bar_chart(metrics)
-        
-#         model_info = f"Model used: {use_model}"
-#         if use_model == "Both":
-#             model_info += f" (Original: {model_weight:.1f}, Custom: {1-model_weight:.1f}, Method: {blend_method})"
-        
-#         metrics_text = f"{model_info}\n\nMetrics:\n"
-#         if 'f1_score' in metrics:
-#             f1_error = 1.0 - metrics['f1_score']
-#             metrics_text += f"F1 Error (1-F1): {f1_error:.4f}\n"
-#         if 'uniform_hausdorff_distance' in metrics: metrics_text += f"UHD: {metrics['uniform_hausdorff_distance']:.4f}\n"
-#         if 'tangent_space_mean_distance' in metrics: metrics_text += f"TMD: {metrics['tangent_space_mean_distance']:.4f}\n"
-#         if 'chamfer_distance' in metrics: metrics_text += f"CD: {metrics['chamfer_distance']:.4f}\n"
-#         if 'iou_score' in metrics: metrics_text += f"IoU Score: {metrics.get('iou_score', metrics.get('iou', 0.0)):.4f}"
-#         if reference_mesh is None: metrics_text += "\nNote: For more accurate metrics, provide a reference model."
-        
-#         point_cloud = trimesh.points.PointCloud(mesh.vertices, colors=mesh.visual.vertex_colors)
-        
-#         # Simpan file-file
-#         rv = []
-#         for format in formats:
-#             file_path = os.path.join(output_dir, f"model_{use_model.replace(' ', '_')}_{timestamp}.{format}")
-#             if format == "ply":
-#                 point_cloud.export(file_path) # Ekspor point cloud
-#             else:
-#                 mesh.export(file_path) # Ekspor mesh seperti biasa
-#             rv.append(file_path)
-                
-#         rv.extend([
-#             (1.0 - metrics.get("f1_score", 0.0)),
-#             metrics.get("uniform_hausdorff_distance", 0.0),
-#             metrics.get("tangent_space_mean_distance", 0.0),
-#             metrics.get("chamfer_distance", 0.0),
-#             metrics.get("iou_score", metrics.get("iou", 0.0)),
-#             metrics_text,
-#             radar_chart,
-#             bar_chart
-#         ])
-        
-#         if torch.cuda.is_available():
-#             torch.cuda.empty_cache()
-            
-#         return rv
-#     except RuntimeError as e:
-#         if "CUDA out of memory" in str(e):
-#             if torch.cuda.is_available():
-#                 torch.cuda.empty_cache()
-#             raise gr.Error("GPU memory error. Try 'Konsep' quality or lower resolution.")
-#         else:
-#             raise gr.Error(f"Generation error: {str(e)}")
-#     except Exception as e:
-#         raise gr.Error(f"Error: {str(e)}")
 
 def run_example(image_pil):
     preprocessed = preprocess(image_pil, False, 0.9)
@@ -1656,7 +1224,7 @@ def run_generation_pipeline(
         processed_image,
         mc_resolution,
         reference_model,
-        ["obj", "glb", "ply"],  # Explicitly define formats
+        ["obj", "glb", "ply"],
         model_quality,
         texture_quality,
         smoothing_factor,
@@ -1665,9 +1233,6 @@ def run_generation_pipeline(
         model_weight
     )
 
-    # 4. Return all outputs in a single list.
-    # The first item is the processed image, followed by the 10 items from generate.
-    # This creates a final list of 11 items that matches the UI outputs.
     return [processed_image] + generation_results
 
 with gr.Blocks(title="Dual Model 3D Generation") as interface:
@@ -1873,44 +1438,6 @@ Unggah gambar untuk menghasilkan model 3D menggunakan model original TripoSR, mo
             examples_per_page=20,
         )
     
-    # Event handlers
-    # submit.click(fn=check_input_image, inputs=[input_image]).success(
-    #     fn=preprocess,
-    #     inputs=[input_image, do_remove_background, foreground_ratio],
-    #     outputs=[processed_image],
-    # ).success(
-    #     fn=lambda img, rb, fr, mc, rm, mq, tq, sf, um, bm, mw: 
-    #         generate(
-    #             preprocess(img, rb, fr),
-    #             mc, rm, ["obj", "glb"], mq, tq, sf, um, bm, mw
-    #         ),
-    #     inputs=[
-    #         input_image, 
-    #         do_remove_background, 
-    #         foreground_ratio,
-    #         mc_resolution,
-    #         reference_model,
-    #         model_quality,
-    #         texture_quality,
-    #         smoothing_factor,
-    #         use_model,
-    #         blend_method,
-    #         model_weight
-    #     ],
-    #     outputs=[
-    #         output_model_obj, 
-    #         output_model_glb,
-    #         f1_metric,
-    #         uhd_metric,
-    #         tmd_metric,
-    #         cd_metric,
-    #         iou_metric,
-    #         metrics_text,
-    #         radar_plot,
-    #         bar_plot
-    #     ]
-    # )
-    
     submit.click(
         fn=run_generation_pipeline,
         inputs=[
@@ -1927,17 +1454,17 @@ Unggah gambar untuk menghasilkan model 3D menggunakan model original TripoSR, mo
             model_weight
         ],
         outputs=[
-            processed_image,      # 1. Output for the processed image display
-            output_model_obj,     # 2.
-            output_model_glb,     # 3.
-            f1_metric,            # 4.
-            uhd_metric,           # 5.
-            tmd_metric,           # 6.
-            cd_metric,            # 7.
-            iou_metric,           # 8.
-            metrics_text,         # 9.
-            radar_plot,           # 10.
-            bar_plot              # 11.
+            processed_image,
+            output_model_obj,
+            output_model_glb,
+            f1_metric,
+            uhd_metric,
+            tmd_metric,
+            cd_metric,
+            iou_metric,
+            metrics_text, 
+            radar_plot,       
+            bar_plot       
         ]
     )
     
