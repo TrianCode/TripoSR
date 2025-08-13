@@ -1453,18 +1453,20 @@ Unggah gambar untuk menghasilkan model 3D menggunakan model original TripoSR, mo
             blend_method,
             model_weight
         ],
+        # Kode Baru yang Benar
         outputs=[
             processed_image,
             output_model_obj,
             output_model_glb,
+            output_model_ply,   # <-- Tambahkan yang ini
             f1_metric,
             uhd_metric,
             tmd_metric,
             cd_metric,
             iou_metric,
-            metrics_text, 
-            radar_plot,       
-            bar_plot       
+            metrics_text,
+            radar_plot,
+            bar_plot
         ]
     )
     
