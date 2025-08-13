@@ -1288,16 +1288,7 @@ def fix_model_orientation(mesh):
         #     bar_chart
         # ])
 # Kode Baru yang Benar
-        rv.extend([
-            (1.0 - float(metrics.get("f1_score", 0.0))),
-            float(metrics.get("uniform_hausdorff_distance", 0.0)),
-            float(metrics.get("tangent_space_mean_distance", 0.0)),
-            float(metrics.get("chamfer_distance", 0.0)),
-            float(metrics.get("iou_score", metrics.get("iou", 0.0))),
-            metrics_text,
-            radar_chart,
-            bar_chart
-        ])
+        
 
         
 #         if torch.cuda.is_available():
@@ -1314,9 +1305,7 @@ def fix_model_orientation(mesh):
 #     except Exception as e:
 #         raise gr.Error(f"Error: {str(e)}")
 
-# GANTI TOTAL FUNGSI GENERATE ANDA DENGAN YANG DI BAWAH INI
 
-# GANTI TOTAL FUNGSI GENERATE ANDA DENGAN YANG DI BAWAH INI
 
 def generate(image, mc_resolution, reference_model=None, formats=["obj", "glb", "ply"], 
              model_quality="Standar", texture_quality=7, smoothing_factor=0.3,
@@ -1430,9 +1419,6 @@ def generate(image, mc_resolution, reference_model=None, formats=["obj", "glb", 
         if 'iou_score' in metrics: metrics_text += f"IoU Score: {metrics.get('iou_score', metrics.get('iou', 0.0)):.4f}"
         if reference_mesh is None: metrics_text += "\nNote: For more accurate metrics, provide a reference model."
         
-        # --- PERUBAHAN DIMULAI DI SINI ---
-        
-        # Buat objek point cloud dari vertices dan warnanya
         point_cloud = trimesh.points.PointCloud(mesh.vertices, colors=mesh.visual.vertex_colors)
         
         # Simpan file-file
@@ -1444,15 +1430,23 @@ def generate(image, mc_resolution, reference_model=None, formats=["obj", "glb", 
             else:
                 mesh.export(file_path) # Ekspor mesh seperti biasa
             rv.append(file_path)
-        
-        # --- PERUBAHAN BERAKHIR DI SINI ---
-        
+                
+        # rv.extend([
+        #     (1.0 - metrics.get("f1_score", 0.0)),
+        #     metrics.get("uniform_hausdorff_distance", 0.0),
+        #     metrics.get("tangent_space_mean_distance", 0.0),
+        #     metrics.get("chamfer_distance", 0.0),
+        #     metrics.get("iou_score", metrics.get("iou", 0.0)),
+        #     metrics_text,
+        #     radar_chart,
+        #     bar_chart
+        # ])
         rv.extend([
-            (1.0 - metrics.get("f1_score", 0.0)),
-            metrics.get("uniform_hausdorff_distance", 0.0),
-            metrics.get("tangent_space_mean_distance", 0.0),
-            metrics.get("chamfer_distance", 0.0),
-            metrics.get("iou_score", metrics.get("iou", 0.0)),
+            (1.0 - float(metrics.get("f1_score", 0.0))),
+            float(metrics.get("uniform_hausdorff_distance", 0.0)),
+            float(metrics.get("tangent_space_mean_distance", 0.0)),
+            float(metrics.get("chamfer_distance", 0.0)),
+            float(metrics.get("iou_score", metrics.get("iou", 0.0))),
             metrics_text,
             radar_chart,
             bar_chart
