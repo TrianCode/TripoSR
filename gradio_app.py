@@ -883,7 +883,7 @@ def density_blend_meshes(mesh1, mesh2):
 def create_metrics_radar_chart(current_metrics):
     """Create a radar chart comparing the current metrics with historical averages"""
     metrics_to_show = {
-        'f1_score': {'display': 'F1', 'invert': False},
+        'f1_score': {'display': 'F1', 'invert': True},
         'uniform_hausdorff_distance': {'display': 'UHD', 'invert': True},
         'tangent_space_mean_distance': {'display': 'TMD', 'invert': True},
         'chamfer_distance': {'display': 'CD', 'invert': True},
@@ -1409,7 +1409,11 @@ def generate(image, mc_resolution, reference_model=None, formats=["obj", "glb"],
             model_info += f" (Original: {model_weight:.1f}, Custom: {1-model_weight:.1f}, Method: {blend_method})"
         
         metrics_text = f"{model_info}\n\nMetrics:\n"
-        if 'f1_score' in metrics: metrics_text += f"F1 Score: {metrics['f1_score']:.4f}\n"
+        # Di dalam blok if reference_mesh is not None:
+        if 'f1_score' in metrics:
+            f1_error = 1.0 - metrics['f1_score']
+            metrics_text += f"F1 Error (1-F1): {f1_error:.4f}\n"
+        # if 'f1_score' in metrics: metrics_text += f"F1 Score: {metrics['f1_score']:.4f}\n"
         if 'uniform_hausdorff_distance' in metrics: metrics_text += f"UHD: {metrics['uniform_hausdorff_distance']:.4f}\n"
         if 'tangent_space_mean_distance' in metrics: metrics_text += f"TMD: {metrics['tangent_space_mean_distance']:.4f}\n"
         if 'chamfer_distance' in metrics: metrics_text += f"CD: {metrics['chamfer_distance']:.4f}\n"
@@ -1423,7 +1427,9 @@ def generate(image, mc_resolution, reference_model=None, formats=["obj", "glb"],
             rv.append(file_path)
         
         rv.extend([
-            metrics.get("f1_score", 0.0),
+            # Di dalam blok rv.extend([...])
+            (1.0 - metrics.get("f1_score", 0.0)),
+            # metrics.get("f1_score", 0.0),
             metrics.get("uniform_hausdorff_distance", 0.0),
             metrics.get("tangent_space_mean_distance", 0.0),
             metrics.get("chamfer_distance", 0.0),
