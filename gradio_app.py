@@ -1304,7 +1304,9 @@ def fix_model_orientation(mesh):
 
 # GANTI TOTAL FUNGSI GENERATE ANDA DENGAN YANG DI BAWAH INI
 
-def generate(image, mc_resolution, reference_model=None, formats=["obj", "glb"], 
+# GANTI TOTAL FUNGSI GENERATE ANDA DENGAN YANG DI BAWAH INI
+
+def generate(image, mc_resolution, reference_model=None, formats=["obj", "glb", "ply"], 
              model_quality="Standar", texture_quality=7, smoothing_factor=0.3,
              use_model="Both", blend_method="weighted_average", model_weight=0.5):
     try:
@@ -1328,34 +1330,32 @@ def generate(image, mc_resolution, reference_model=None, formats=["obj", "glb"],
         with torch.inference_mode():
             if use_model == "Original Only":
                 scene_codes = model_original(image, device=device)
-                # Tambahkan argumen 'has_vertex_color' yang dibutuhkan
                 mesh = model_original.extract_mesh(
                     scene_codes, 
-                    True, # Ini untuk has_vertex_color
+                    True,
                     resolution=min(mc_resolution, 192)
                 )[0]
                 
             elif use_model == "Custom Only":
                 scene_codes = model_custom(image, device=device)
-                # Tambahkan argumen 'has_vertex_color' yang dibutuhkan
                 mesh = model_custom.extract_mesh(
                     scene_codes, 
-                    True, # Ini untuk has_vertex_color
+                    True,
                     resolution=min(mc_resolution, 192)
                 )[0]
 
-            else:  # "Both" - Ensemble approach
+            else:
                 scene_codes_original = model_original(image, device=device)
                 mesh_original = model_original.extract_mesh(
                     scene_codes_original, 
-                    True, # Ini untuk has_vertex_color
+                    True,
                     resolution=min(mc_resolution, 192)
                 )[0]
                 
                 scene_codes_custom = model_custom(image, device=device)
                 mesh_custom = model_custom.extract_mesh(
                     scene_codes_custom, 
-                    True, # Ini untuk has_vertex_color
+                    True,
                     resolution=min(mc_resolution, 192)
                 )[0]
                 
@@ -1409,27 +1409,34 @@ def generate(image, mc_resolution, reference_model=None, formats=["obj", "glb"],
             model_info += f" (Original: {model_weight:.1f}, Custom: {1-model_weight:.1f}, Method: {blend_method})"
         
         metrics_text = f"{model_info}\n\nMetrics:\n"
-        # Di dalam blok if reference_mesh is not None:
         if 'f1_score' in metrics:
             f1_error = 1.0 - metrics['f1_score']
-            metrics_text += f"F1 Score: {f1_error:.4f}\n"
-        # if 'f1_score' in metrics: metrics_text += f"F1 Score: {metrics['f1_score']:.4f}\n"
+            metrics_text += f"F1 Error (1-F1): {f1_error:.4f}\n"
         if 'uniform_hausdorff_distance' in metrics: metrics_text += f"UHD: {metrics['uniform_hausdorff_distance']:.4f}\n"
         if 'tangent_space_mean_distance' in metrics: metrics_text += f"TMD: {metrics['tangent_space_mean_distance']:.4f}\n"
         if 'chamfer_distance' in metrics: metrics_text += f"CD: {metrics['chamfer_distance']:.4f}\n"
         if 'iou_score' in metrics: metrics_text += f"IoU Score: {metrics.get('iou_score', metrics.get('iou', 0.0)):.4f}"
         if reference_mesh is None: metrics_text += "\nNote: For more accurate metrics, provide a reference model."
         
+        # --- PERUBAHAN DIMULAI DI SINI ---
+        
+        # Buat objek point cloud dari vertices dan warnanya
+        point_cloud = trimesh.points.PointCloud(mesh.vertices, colors=mesh.visual.vertex_colors)
+        
+        # Simpan file-file
         rv = []
         for format in formats:
             file_path = os.path.join(output_dir, f"model_{use_model.replace(' ', '_')}_{timestamp}.{format}")
-            mesh.export(file_path)
+            if format == "ply":
+                point_cloud.export(file_path) # Ekspor point cloud
+            else:
+                mesh.export(file_path) # Ekspor mesh seperti biasa
             rv.append(file_path)
         
+        # --- PERUBAHAN BERAKHIR DI SINI ---
+        
         rv.extend([
-            # Di dalam blok rv.extend([...])
             (1.0 - metrics.get("f1_score", 0.0)),
-            # metrics.get("f1_score", 0.0),
             metrics.get("uniform_hausdorff_distance", 0.0),
             metrics.get("tangent_space_mean_distance", 0.0),
             metrics.get("chamfer_distance", 0.0),
@@ -1482,7 +1489,7 @@ def run_generation_pipeline(
         processed_image,
         mc_resolution,
         reference_model,
-        ["obj", "glb"],  # Explicitly define formats
+        ["obj", "glb", "ply"],  # Explicitly define formats
         model_quality,
         texture_quality,
         smoothing_factor,
@@ -1627,6 +1634,11 @@ Unggah gambar untuk menghasilkan model 3D menggunakan model original TripoSR, mo
                         label="Model 3D (GLB)",
                         interactive=False
                     )
+                    output_model_ply = gr.Model3D(
+                        label="Point Cloud (PLY)",
+                        interactive=False
+                    )
+                    
                 with gr.TabItem("Metrik Evaluasi"):
                     with gr.Row():
                         f1_metric = gr.Number(label="F1 Score", value=0.0, precision=4)
@@ -1687,7 +1699,7 @@ Unggah gambar untuk menghasilkan model 3D menggunakan model original TripoSR, mo
                 "examples/pintu-belok.png",
             ],
             inputs=[input_image],
-            outputs=[processed_image, output_model_obj, output_model_glb, f1_metric, uhd_metric, tmd_metric, cd_metric, iou_metric, metrics_text, radar_plot, bar_plot],
+            outputs=[processed_image, output_model_obj, output_model_glb, output_model_ply, f1_metric, uhd_metric, tmd_metric, cd_metric, iou_metric, metrics_text, radar_plot, bar_plot],
             cache_examples=False,
             fn=partial(run_example),
             label="Contoh",
