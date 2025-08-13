@@ -1197,11 +1197,12 @@ def generate(image, mc_resolution, reference_model=None, formats=["obj", "glb", 
 
 def run_example(image_pil):
     preprocessed = preprocess(image_pil, False, 0.9)
-    mesh_obj, mesh_glb, f1, uhd, tmd, cd, iou, metrics_text, radar_chart, bar_chart = generate(
-        preprocessed, 128, None, ["obj", "glb"],
+    # Panggil generate untuk mendapatkan semua 11 hasil
+    results = generate(
+        preprocessed, 128, None, ["obj", "glb", "ply"],
         "Standar", 7, 0.3, "Both", "weighted_average", 0.5
     )
-    return preprocessed, mesh_obj, mesh_glb, f1, uhd, tmd, cd, iou, metrics_text, radar_chart, bar_chart
+    return [preprocessed] + results
 
 def run_generation_pipeline(
     input_image, do_remove_background, foreground_ratio, 
