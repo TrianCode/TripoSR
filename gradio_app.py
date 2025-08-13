@@ -1158,6 +1158,9 @@ def generate(image, mc_resolution, reference_model=None, formats=["obj", "glb", 
         vertex_colors = None
         if hasattr(mesh, 'visual') and hasattr(mesh.visual, 'vertex_colors'):
             vertex_colors = mesh.visual.vertex_colors
+        else:
+            num_vertices = len(mesh.vertices)
+            vertex_colors = np.full((num_vertices, 4), [200, 200, 200, 255], dtype=np.uint8)
         point_cloud = trimesh.points.PointCloud(mesh.vertices, colors=vertex_colors)
         
         rv = []
