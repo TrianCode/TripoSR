@@ -856,12 +856,19 @@ def density_blend_meshes(mesh1, mesh2):
 def create_metrics_radar_chart(current_metrics):
     """Create a radar chart comparing the current metrics with historical averages"""
     metrics_to_show = {
-        'f1_score': {'display': 'F1', 'invert': True},
+        'f1_score': {'display': 'F1', 'invert': True},  # <-- Perubahan di sini
         'uniform_hausdorff_distance': {'display': 'UHD', 'invert': True},
         'tangent_space_mean_distance': {'display': 'TMD', 'invert': True},
         'chamfer_distance': {'display': 'CD', 'invert': True},
         'iou_score': {'display': 'IoU', 'invert': False}
     }
+    # metrics_to_show = {
+    #     'f1_score': {'display': 'F1', 'invert': True},
+    #     'uniform_hausdorff_distance': {'display': 'UHD', 'invert': True},
+    #     'tangent_space_mean_distance': {'display': 'TMD', 'invert': True},
+    #     'chamfer_distance': {'display': 'CD', 'invert': True},
+    #     'iou_score': {'display': 'IoU', 'invert': False}
+    # }
     
     available_metrics = {k: v for k, v in metrics_to_show.items() if k in current_metrics}
     
