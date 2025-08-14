@@ -1147,7 +1147,7 @@ def generate(image, mc_resolution, reference_model=None, formats=["obj", "glb", 
         metrics_text = f"{model_info}\n\nMetrics:\n"
         if 'f1_score' in metrics:
             f1_error = 1.0 - float(metrics['f1_score'])
-            metrics_text += f"F1 Error (1-F1): {f1_error:.4f}\n"
+            metrics_text += f"F1 Score: {f1_error:.4f}\n"
         if 'uniform_hausdorff_distance' in metrics: metrics_text += f"UHD: {metrics['uniform_hausdorff_distance']:.4f}\n"
         if 'tangent_space_mean_distance' in metrics: metrics_text += f"TMD: {metrics['tangent_space_mean_distance']:.4f}\n"
         if 'chamfer_distance' in metrics: metrics_text += f"CD: {metrics['chamfer_distance']:.4f}\n"
