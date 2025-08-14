@@ -1153,6 +1153,15 @@ def generate(image, mc_resolution, reference_model=None, formats=["obj", "glb", 
         if 'chamfer_distance' in metrics: metrics_text += f"CD: {metrics['chamfer_distance']:.4f}\n"
         if 'iou_score' in metrics: metrics_text += f"IoU Score: {metrics.get('iou_score', metrics.get('iou', 0.0)):.4f}"
         if reference_mesh is None: metrics_text += "\nNote: For more accurate metrics, provide a reference model."
+
+
+        print("--- DEBUGGING MESH ---")
+        print(f"Tipe objek mesh: {type(mesh)}")
+        print(f"Jumlah vertices: {len(mesh.vertices)}")
+        print(f"Apakah punya warna?: {hasattr(mesh, 'visual') and hasattr(mesh.visual, 'vertex_colors')}")
+        print("--- AKHIR DEBUG ---")
+        
+        vertex_colors = None
         
         # FIX #2: Membuat point_cloud SEBELUM loop penyimpanan
         vertex_colors = None
@@ -1228,7 +1237,7 @@ def run_generation_pipeline(
         processed_image,
         mc_resolution,
         reference_model,
-        ["obj", "glb", "ply"],
+        ["obj", "glb", "xyz"],
         model_quality,
         texture_quality,
         smoothing_factor,
@@ -1371,7 +1380,7 @@ Unggah gambar untuk menghasilkan model 3D menggunakan model original TripoSR, mo
                         interactive=False
                     )
                     output_model_ply = gr.Model3D(
-                        label="Point Cloud (PLY)",
+                        label="Point Cloud (XYZ)",
                         interactive=False
                     )
                     
