@@ -1164,13 +1164,21 @@ def generate(image, mc_resolution, reference_model=None, formats=["obj", "glb", 
         vertex_colors = None
         
         # FIX #2: Membuat point_cloud SEBELUM loop penyimpanan
-        vertex_colors = None
-        if hasattr(mesh, 'visual') and hasattr(mesh.visual, 'vertex_colors'):
-            vertex_colors = mesh.visual.vertex_colors
-        else:
-            num_vertices = len(mesh.vertices)
-            vertex_colors = np.full((num_vertices, 4), [200, 200, 200, 255], dtype=np.uint8)
-        point_cloud = trimesh.points.PointCloud(mesh.vertices, colors=vertex_colors)
+        print("--- DEBUGGING LANJUTAN ---")
+        print("Memaksa semua titik point cloud menjadi MERAH.")
+        num_vertices = len(mesh.vertices)
+        forced_colors = np.full((num_vertices, 4), [255, 0, 0, 255], dtype=np.uint8)
+        
+        point_cloud = trimesh.points.PointCloud(mesh.vertices, colors=forced_colors)
+        print("--- AKHIR DEBUG LANJUTAN ---")
+
+        # vertex_colors = None
+        # if hasattr(mesh, 'visual') and hasattr(mesh.visual, 'vertex_colors'):
+        #     vertex_colors = mesh.visual.vertex_colors
+        # else:
+        #     num_vertices = len(mesh.vertices)
+        #     vertex_colors = np.full((num_vertices, 4), [200, 200, 200, 255], dtype=np.uint8)
+        # point_cloud = trimesh.points.PointCloud(mesh.vertices, colors=vertex_colors)
         
         rv = []
         for format in formats:
@@ -1237,7 +1245,7 @@ def run_generation_pipeline(
         processed_image,
         mc_resolution,
         reference_model,
-        ["obj", "glb", "xyz"],
+        ["obj", "glb", "ply"],
         model_quality,
         texture_quality,
         smoothing_factor,
@@ -1380,7 +1388,7 @@ Unggah gambar untuk menghasilkan model 3D menggunakan model original TripoSR, mo
                         interactive=False
                     )
                     output_model_ply = gr.Model3D(
-                        label="Point Cloud (XYZ)",
+                        label="Point Cloud (PLY)",
                         interactive=False
                     )
                     
