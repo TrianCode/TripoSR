@@ -930,11 +930,12 @@ def create_metrics_radar_chart(current_metrics):
     )
     
     return fig
+# GANTI TOTAL FUNGSI create_metrics_bar_chart ANDA DENGAN YANG DI BAWAH INI
 
 def create_metrics_bar_chart(current_metrics):
     """Create a bar chart for current metrics"""
     metrics_to_show = {
-        'f1_score': {'display': 'F1 Score (↑)', 'color': 'purple', 'invert': True},
+        'f1_score': {'display': 'F1 Score (↑)', 'color': 'purple'},
         'uniform_hausdorff_distance': {'display': 'UHD (↓)', 'color': 'red'},
         'tangent_space_mean_distance': {'display': 'TMD (↓)', 'color': 'orange'},
         'chamfer_distance': {'display': 'CD (↓)', 'color': 'green'},
@@ -955,9 +956,20 @@ def create_metrics_bar_chart(current_metrics):
         return fig
     
     names = [available_metrics[m]['display'] for m in available_metrics.keys()]
-    values = [current_metrics[m] for m in available_metrics.keys()]
+    values = []
     colors = [available_metrics[m]['color'] for m in available_metrics.keys()]
-    
+
+    # --- PERUBAHAN UTAMA ADA DI SINI ---
+    for metric_name in available_metrics.keys():
+        # Jika metriknya adalah f1_score, hitung 1 - nilainya
+        if metric_name == 'f1_score':
+            f1_error = 1.0 - float(current_metrics[metric_name])
+            values.append(f1_error)
+        # Untuk metrik lain, gunakan nilai aslinya
+        else:
+            values.append(current_metrics[metric_name])
+    # ------------------------------------
+
     fig = go.Figure(data=[
         go.Bar(
             x=names,
@@ -978,6 +990,54 @@ def create_metrics_bar_chart(current_metrics):
     )
     
     return fig
+    
+# def create_metrics_bar_chart(current_metrics):
+#     """Create a bar chart for current metrics"""
+#     metrics_to_show = {
+#         'f1_score': {'display': 'F1 Score (↑)', 'color': 'purple', 'invert': True},
+#         'uniform_hausdorff_distance': {'display': 'UHD (↓)', 'color': 'red'},
+#         'tangent_space_mean_distance': {'display': 'TMD (↓)', 'color': 'orange'},
+#         'chamfer_distance': {'display': 'CD (↓)', 'color': 'green'},
+#         'iou_score': {'display': 'IoU (↑)', 'color': 'blue'}
+#     }
+    
+#     available_metrics = {k: v for k, v in metrics_to_show.items() if k in current_metrics}
+    
+#     if not available_metrics:
+#         fig = go.Figure()
+#         fig.add_annotation(
+#             text="No metrics available",
+#             xref="paper", yref="paper",
+#             x=0.5, y=0.5,
+#             showarrow=False
+#         )
+#         fig.update_layout(title="Metrics")
+#         return fig
+    
+#     names = [available_metrics[m]['display'] for m in available_metrics.keys()]
+#     values = [current_metrics[m] for m in available_metrics.keys()]
+#     colors = [available_metrics[m]['color'] for m in available_metrics.keys()]
+    
+#     fig = go.Figure(data=[
+#         go.Bar(
+#             x=names,
+#             y=values,
+#             marker_color=colors
+#         )
+#     ])
+    
+#     fig.update_layout(
+#         title="Current Metrics",
+#         xaxis_title="Metric",
+#         yaxis_title="Value",
+#         yaxis=dict(
+#             title="Value",
+#             titlefont_size=16,
+#             tickfont_size=14,
+#         )
+#     )
+    
+#     return fig
 
 def check_input_image(input_image):
     if input_image is None:
