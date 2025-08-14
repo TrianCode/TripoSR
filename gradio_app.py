@@ -934,7 +934,7 @@ def create_metrics_radar_chart(current_metrics):
 def create_metrics_bar_chart(current_metrics):
     """Create a bar chart for current metrics"""
     metrics_to_show = {
-        'f1_score': {'display': 'F1 Score (↑)', 'color': 'purple'},
+        'f1_score': {'display': 'F1 Score (↑)', 'color': 'purple', 'invert': True},
         'uniform_hausdorff_distance': {'display': 'UHD (↓)', 'color': 'red'},
         'tangent_space_mean_distance': {'display': 'TMD (↓)', 'color': 'orange'},
         'chamfer_distance': {'display': 'CD (↓)', 'color': 'green'},
