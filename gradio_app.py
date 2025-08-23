@@ -723,7 +723,7 @@ print("Loading custom TripoSR model...")
 model_custom = TSR.from_pretrained(
     "TrianC0de/TripoSR2",
     config_name="config.yaml",
-    weight_name="sf3d_checkpoint_epoch_3000.ckpt", 
+    weight_name="sf3d_checkpoint_epoch_5000.ckpt", 
 )
 
 # Configure both models
