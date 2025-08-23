@@ -900,11 +900,13 @@ def create_metrics_radar_chart(current_metrics):
     for metric_name, config in available_metrics.items():
         current_val = current_metrics[metric_name]
         avg_val = avg_metrics[metric_name]
-        
+
         if config['invert']:
             max_val = max(current_val, avg_val) * 1.2
-            current_values.append(1 - (current_val / max_val))
-            history_values.append(1 - (avg_val / max_val))
+            denominator = max_val + 1e-9
+            current_values.append(1 - (current_val / denominator))
+            history_values.append(1 - (avg_val / denominator))
+
         else:
             current_values.append(current_val)
             history_values.append(avg_val)
@@ -1119,8 +1121,11 @@ def fix_model_orientation(mesh):
     mesh.vertices -= mesh.vertices.mean(axis=0)
     
     # Scale to fit in a unit cube
-    scale = 1.0 / max(mesh.vertices.max(axis=0) - mesh.vertices.min(axis=0))
-    mesh.vertices *= scale
+    max_extent = max(mesh.vertices.max(axis=0) - mesh.vertices.min(axis=0))
+# Only scale if the mesh has a non-zero size
+    if max_extent > 1e-6:  # Using a small threshold for float comparison
+        scale = 1.0 / max_extent
+        mesh.vertices *= scale
     
     # Fix normals to ensure proper rendering
     mesh.fix_normals()
