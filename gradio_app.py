@@ -1292,7 +1292,7 @@ def fix_model_orientation(mesh):
 #             float(metrics.get("uniform_hausdorff_distance", 0.0)),
 #             float(metrics.get("tangent_space_mean_distance", 0.0)),
 #             float(metrics.get("chamfer_distance", 0.0)),
-#             float(metrics.get("iou_score", metrics.get("iou", 0.0))),
+#             float(metrics.get("iou_score", metrics.get("iou", 0.0)),
 #             metrics_text,
 #             radar_chart,
 #             bar_chart
