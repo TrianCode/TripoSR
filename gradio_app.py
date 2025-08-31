@@ -770,7 +770,9 @@ def ensemble_meshes(mesh1, mesh2, blend_method="weighted_average", weight1=0.5, 
         combined_mesh = trimesh.Trimesh(vertices=combined_vertices, faces=combined_faces)
     
     # Clean up the resulting mesh
-    combined_mesh.remove_duplicate_faces()
+    # combined_mesh.remove_duplicate_faces()
+    # Kode Baru
+    combined_mesh.update_faces(combined_mesh.unique_faces())
     combined_mesh.remove_unreferenced_vertices()
     combined_mesh.fix_normals()
     
@@ -1415,15 +1417,39 @@ def generate(image, mc_resolution, reference_model=None, formats=["obj", "glb", 
                 normalized_colors[i][2] = int(b * 255)
                 normalized_colors[i][3] = colors[i][3]
             mesh.visual.vertex_colors = normalized_colors
-        
+
+        # Blok Kode Baru yang Sudah Diperbaiki
         reference_mesh = None
         if reference_model is not None:
             try:
-                reference_mesh = trimesh.load(reference_model.name)
-            except Exception:
+                # Muat file sebagai objek umum (bisa Scene atau Mesh)
+                loaded_object = trimesh.load(reference_model.name, force='mesh')
+        
+                # Periksa apakah hasilnya adalah Scene
+                if isinstance(loaded_object, trimesh.Scene):
+                    # Jika ya, gabungkan semua mesh di dalamnya menjadi satu objek mesh tunggal
+                    reference_mesh = loaded_object.dump(concatenate=True)
+                else:
+                    # Jika tidak, itu sudah merupakan mesh
+                    reference_mesh = loaded_object
+                
+                # Pastikan hasil akhir adalah Trimesh yang valid dan bukan mesh kosong
+                if not isinstance(reference_mesh, trimesh.Trimesh) or len(reference_mesh.vertices) == 0:
+                    print("Peringatan: Gagal mengubah scene menjadi mesh yang valid.")
+                    reference_mesh = None
+        
+            except Exception as e:
+                print(f"Error saat memuat model referensi: {e}")
                 reference_mesh = None
+        
+        # reference_mesh = None
+        # if reference_model is not None:
+        #     try:
+        #         reference_mesh = trimesh.load(reference_model.name)
+        #     except Exception:
+        #         reference_mesh = None
 
-        metrics = calculate_metrics(mesh, reference_mesh)
+        # metrics = calculate_metrics(mesh, reference_mesh)
         
         import random
 
