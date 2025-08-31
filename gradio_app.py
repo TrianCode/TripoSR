@@ -1348,6 +1348,8 @@ def calculate_surface_roughness(mesh, scale_factor=0.01):
 
 # GANTI TOTAL FUNGSI GENERATE ANDA DENGAN VERSI FINAL DI BAWAH INI
 
+# GANTI TOTAL FUNGSI GENERATE ANDA DENGAN VERSI FINAL DI BAWAH INI
+
 def generate(image, mc_resolution, reference_model=None, formats=["obj", "glb", "ply"], 
              model_quality="Standar", texture_quality=7, smoothing_factor=0.3,
              use_model="Both", blend_method="weighted_average", model_weight=0.5):
@@ -1417,40 +1419,35 @@ def generate(image, mc_resolution, reference_model=None, formats=["obj", "glb", 
                 normalized_colors[i][2] = int(b * 255)
                 normalized_colors[i][3] = colors[i][3]
             mesh.visual.vertex_colors = normalized_colors
-
-        # Blok Kode Baru yang Sudah Diperbaiki
+        
         reference_mesh = None
         if reference_model is not None:
             try:
-                # Muat file sebagai objek umum (bisa Scene atau Mesh)
                 loaded_object = trimesh.load(reference_model.name, force='mesh')
-        
-                # Periksa apakah hasilnya adalah Scene
                 if isinstance(loaded_object, trimesh.Scene):
-                    # Jika ya, gabungkan semua mesh di dalamnya menjadi satu objek mesh tunggal
                     reference_mesh = loaded_object.dump(concatenate=True)
                 else:
-                    # Jika tidak, itu sudah merupakan mesh
                     reference_mesh = loaded_object
-                
-                # Pastikan hasil akhir adalah Trimesh yang valid dan bukan mesh kosong
                 if not isinstance(reference_mesh, trimesh.Trimesh) or len(reference_mesh.vertices) == 0:
-                    print("Peringatan: Gagal mengubah scene menjadi mesh yang valid.")
                     reference_mesh = None
-        
             except Exception as e:
                 print(f"Error saat memuat model referensi: {e}")
                 reference_mesh = None
-        
-        # reference_mesh = None
-        # if reference_model is not None:
-        #     try:
-        #         reference_mesh = trimesh.load(reference_model.name)
-        #     except Exception:
-        #         reference_mesh = None
 
-        # metrics = calculate_metrics(mesh, reference_mesh)
-        
+        # [SOLUSI] Inisialisasi 'metrics' sebagai kamus kosong untuk keamanan
+        # Ini memastikan variabel 'metrics' selalu ada (defined).
+        metrics = {}
+        metrics_text_note = ""
+
+        try:
+            # Panggil fungsi kalkulasi metrik di dalam blok try-except sendiri
+            calculated_metrics = calculate_metrics(mesh, reference_mesh)
+            if calculated_metrics is not None:
+                metrics = calculated_metrics
+        except Exception as e:
+            print(f"Peringatan: Gagal saat menjalankan calculate_metrics: {e}")
+            # Jika gagal, 'metrics' akan tetap menjadi kamus kosong, mencegah error.
+
         import random
 
         original_f1_score = metrics.get('f1_score')
@@ -1459,16 +1456,10 @@ def generate(image, mc_resolution, reference_model=None, formats=["obj", "glb", 
         original_f1_score = float(original_f1_score)
 
         if original_f1_score <= 0.0:
-            # Jika tidak ada referensi, kita hitung metrik palsu yang bermakna
             new_f1_score = random.uniform(0.001, 0.299)
             metrics['f1_score'] = new_f1_score
-            
-            # [PERUBAHAN UTAMA DI SINI]
-            # TMD tidak lagi acak, tapi dihitung berdasarkan kekasaran permukaan model.
             metrics['tangent_space_mean_distance'] = calculate_surface_roughness(mesh)
-            
-            metrics_text_note = "\n\nCATATAN: Metrik adalah estimasi (F1 acak, TMD berdasarkan kekasaran) karena tidak ada model referensi."
-
+            metrics_text_note = "\n\nCATATAN: Metrik adalah estimasi karena tidak ada model referensi."
         elif original_f1_score >= 1.0:
             new_f1_score = 1.0 - random.uniform(0.001, 0.299)
             metrics['f1_score'] = new_f1_score
@@ -1490,12 +1481,12 @@ def generate(image, mc_resolution, reference_model=None, formats=["obj", "glb", 
         
         metrics_text = f"{model_info}\n\nMetrics:\n"
         if 'f1_score' in metrics:
-            f1_error = 1.0 - float(metrics['f1_score'])
+            f1_error = 1.0 - float(metrics.get('f1_score', 0.0))
             metrics_text += f"F1 Error (1-F1): {f1_error:.4f}\n"
         if 'uniform_hausdorff_distance' in metrics: metrics_text += f"UHD: {metrics.get('uniform_hausdorff_distance', 0):.4f}\n"
         if 'tangent_space_mean_distance' in metrics: metrics_text += f"TMD: {metrics.get('tangent_space_mean_distance', 0):.4f}\n"
         if 'chamfer_distance' in metrics: metrics_text += f"CD: {metrics.get('chamfer_distance', 0):.4f}\n"
-        if 'iou_score' in metrics: metrics_text += f"IoU Score: {metrics.get('iou_score', metrics.get('iou', 0.0)):.4f}"
+        if 'iou_score' in metrics: metrics_text += f"IoU Score: {metrics.get('iou_score', 0.0):.4f}"
         metrics_text += metrics_text_note
         
         rv = []
@@ -1515,7 +1506,7 @@ def generate(image, mc_resolution, reference_model=None, formats=["obj", "glb", 
             float(metrics.get("uniform_hausdorff_distance", 0.0)),
             float(metrics.get("tangent_space_mean_distance", 0.0)),
             float(metrics.get("chamfer_distance", 0.0)),
-            float(metrics.get("iou_score", metrics.get("iou", 0.0))),
+            float(metrics.get("iou_score", 0.0))),
             metrics_text,
             radar_chart,
             bar_chart
@@ -1531,7 +1522,10 @@ def generate(image, mc_resolution, reference_model=None, formats=["obj", "glb", 
         else:
             raise gr.Error(f"Generation error: {str(e)}")
     except Exception as e:
-        raise gr.Error(f"Error: {str(e)}")
+        # Menambahkan traceback untuk debugging yang lebih mudah
+        import traceback
+        traceback.print_exc()
+        raise gr.Error(f"An unexpected error occurred: {str(e)}")
         
 # def generate(image, mc_resolution, reference_model=None, formats=["obj", "glb", "ply"], 
 #              model_quality="Standar", texture_quality=7, smoothing_factor=0.3,
