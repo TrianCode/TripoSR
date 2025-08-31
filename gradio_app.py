@@ -1434,19 +1434,15 @@ def generate(image, mc_resolution, reference_model=None, formats=["obj", "glb", 
                 print(f"Error saat memuat model referensi: {e}")
                 reference_mesh = None
 
-        # [SOLUSI] Inisialisasi 'metrics' sebagai kamus kosong untuk keamanan
-        # Ini memastikan variabel 'metrics' selalu ada (defined).
         metrics = {}
         metrics_text_note = ""
 
         try:
-            # Panggil fungsi kalkulasi metrik di dalam blok try-except sendiri
             calculated_metrics = calculate_metrics(mesh, reference_mesh)
             if calculated_metrics is not None:
                 metrics = calculated_metrics
         except Exception as e:
             print(f"Peringatan: Gagal saat menjalankan calculate_metrics: {e}")
-            # Jika gagal, 'metrics' akan tetap menjadi kamus kosong, mencegah error.
 
         import random
 
@@ -1501,12 +1497,13 @@ def generate(image, mc_resolution, reference_model=None, formats=["obj", "glb", 
                 mesh.export(file_path)
                 rv.append(file_path)
         
+        # [PERBAIKAN DI SINI] Tanda kurung yang berlebih sudah dihapus
         rv.extend([
             (1.0 - float(metrics.get("f1_score", 0.0))),
             float(metrics.get("uniform_hausdorff_distance", 0.0)),
             float(metrics.get("tangent_space_mean_distance", 0.0)),
             float(metrics.get("chamfer_distance", 0.0)),
-            float(metrics.get("iou_score", 0.0))),
+            float(metrics.get("iou_score", 0.0)),
             metrics_text,
             radar_chart,
             bar_chart
@@ -1522,7 +1519,6 @@ def generate(image, mc_resolution, reference_model=None, formats=["obj", "glb", 
         else:
             raise gr.Error(f"Generation error: {str(e)}")
     except Exception as e:
-        # Menambahkan traceback untuk debugging yang lebih mudah
         import traceback
         traceback.print_exc()
         raise gr.Error(f"An unexpected error occurred: {str(e)}")
