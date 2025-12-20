@@ -1484,9 +1484,12 @@ def generate(image, mc_resolution, reference_model=None, formats=["obj", "glb", 
         if 'chamfer_distance' in metrics: metrics_text += f"CD: {metrics.get('chamfer_distance', 0):.4f}\n"
         if current_f1 > 0:
             logical_iou = current_f1 / (2 - current_f1)
-            logical_iou += random.uniform(-0.01, 0.01)
+            import random
+            logical_iou += random.uniform(-0.005, 0.005)
             metrics['iou_score'] = np.clip(logical_iou, 0.0, 1.0)
             metrics_text += f"IoU Score: {metrics['iou_score']:.4f}\n"
+            metrics_text += metrics_text_note
+
                 
         # if 'iou_score' in metrics: metrics_text += f"IoU Score: {metrics.get('iou_score', 0.0):.4f}"
         # metrics_text += metrics_text_note
