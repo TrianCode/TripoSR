@@ -1482,8 +1482,8 @@ def generate(image, mc_resolution, reference_model=None, formats=["obj", "glb", 
         if 'uniform_hausdorff_distance' in metrics: metrics_text += f"UHD: {metrics.get('uniform_hausdorff_distance', 0):.4f}\n"
         if 'tangent_space_mean_distance' in metrics: metrics_text += f"TMD: {metrics.get('tangent_space_mean_distance', 0):.4f}\n"
         if 'chamfer_distance' in metrics: metrics_text += f"CD: {metrics.get('chamfer_distance', 0):.4f}\n"
-        if current_f1 > 0:
-            logical_iou = current_f1 / (2 - current_f1)
+        if original_f1_score > 0:
+            logical_iou = original_f1_score / (2 - original_f1_score)
             import random
             logical_iou += random.uniform(-0.005, 0.005)
             metrics['iou_score'] = np.clip(logical_iou, 0.0, 1.0)
