@@ -1449,8 +1449,8 @@ def generate(image, mc_resolution, reference_model=None, formats=["obj", "glb", 
         # AMBIL F1 SCORE (Jika tidak ada, pakai angka default tinggi)
         val_f1 = float(metrics.get('f1_score', 0.0))
         if val_f1 <= 0:
-            val_f1 = 0.9282 + random.uniform(0.0001, 0.0005)
-            metrics['f1_score'] = val_f1
+            # val_f1 = 0.9282 + random.uniform(0.0001, 0.0005)
+            # metrics['f1_score'] = val_f1
             metrics_text_note = "\n\nNote: Metrik berdasarkan estimasi internal."
         else:
             metrics_text_note = "\n\nNote: Metrik dibandingkan dengan model referensi."
